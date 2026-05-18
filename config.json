@@ -1,0 +1,99 @@
+{
+  "application": {
+    "name": "Excel File Processor",
+    "version": "1.0.0",
+    "description": "ระบบประมวลผลไฟล์ Excel พร้อมตั้งค่า Path แบบ Web UI"
+  },
+  "backend": {
+    "framework": "FastAPI",
+    "port": 8000,
+    "host": "0.0.0.0",
+    "reload": true,
+    "cors": {
+      "allow_origins": "*",
+      "allow_methods": ["*"],
+      "allow_headers": ["*"]
+    }
+  },
+  "branches": {
+    "K1": {
+      "code": "11",
+      "sp_path_key": "11",
+      "wh_path_key": "11_00",
+      "description": "K Mart Branch 1"
+    },
+    "K2": {
+      "code": "21",
+      "sp_path_key": "21",
+      "wh_path_key": "21_00",
+      "description": "K Mart Branch 2"
+    },
+    "K3": {
+      "code": "31",
+      "sp_path_key": "31",
+      "wh_path_key": "31_00",
+      "description": "K Mart Branch 3"
+    },
+    "K4": {
+      "code": "41",
+      "sp_path_key": "41",
+      "wh_path_key": "41_00",
+      "description": "K Mart Branch 4"
+    },
+    "K5": {
+      "code": "51",
+      "sp_path_key": "51",
+      "wh_path_key": "51_00",
+      "description": "K Mart Branch 5"
+    },
+    "SP": {
+      "code": "00",
+      "sp_path_key": "SP",
+      "wh_path_key": null,
+      "description": "Main Warehouse"
+    }
+  },
+  "default_paths": {
+    "11": "C:\\Users\\USER\\Desktop\\11",
+    "11_00": "C:\\Users\\USER\\Desktop\\1100",
+    "21": "C:\\Users\\USER\\Desktop\\21",
+    "21_00": "C:\\Users\\USER\\Desktop\\2100",
+    "31": "C:\\Users\\USER\\Desktop\\31",
+    "31_00": "C:\\Users\\USER\\Desktop\\3100",
+    "41": "C:\\Users\\USER\\Desktop\\41",
+    "41_00": "C:\\Users\\USER\\Desktop\\4100",
+    "51": "C:\\Users\\USER\\Desktop\\51",
+    "51_00": "C:\\Users\\USER\\Desktop\\5100",
+    "SP": "C:\\Users\\USER\\Desktop\\SP00"
+  },
+  "excel_structure": {
+    "required_columns": [
+      "ReBplus",
+      "1=SP,2=WH",
+      "RECEIVE_PIECE"
+    ],
+    "ReBplus_format": "code1,code2,code3,...",
+    "extraction_logic": {
+      "branch_code": "Extract position 2 from ReBplus (split by comma)",
+      "type_code": "Get value from column '1=SP,2=WH' (1=หน้าร้าน, 2=โกดัง)"
+    }
+  },
+  "frontend": {
+    "storage": "LocalStorage",
+    "storage_key": "pathsConfig",
+    "ui_theme": {
+      "primary_color": "#3498db",
+      "secondary_color": "#2ecc71",
+      "accent_color": "#e74c3c",
+      "background": "#f5f7fa"
+    }
+  },
+  "file_naming": {
+    "format": "{branch_name}-{type}-{day}-{month}-{thai_year} รับ.txt",
+    "example": "K1-SP-17-5-69 รับ.txt",
+    "types": {
+      "SP": "หน้าร้าน",
+      "WH": "โกดัง"
+    }
+  }
+}
