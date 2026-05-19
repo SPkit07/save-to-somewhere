@@ -1,5 +1,6 @@
 // ==================== CONFIG ====================
-const API_BASE_URL = 'http://localhost:8000'; // เปลี่ยนเป็น URL ของ Backend จริง
+const DESKTOP_MODE = true;  // ใช้ Eel API แทน HTTP
+let currentPreviewData = null;  // เก็บข้อมูล preview ชั่วคราว
 const BRANCH_NAMES = {
     '00': 'WH',
     '11': 'K1',
@@ -44,9 +45,8 @@ function setupEventListeners() {
     dropzone.addEventListener('dragleave', handleDragLeave);
     dropzone.addEventListener('drop', handleFileDrop);
 
-    // File Input
-    browseBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileSelect);
+    // Browse Button
+    browseBtn.addEventListener('click', handleBrowseClick);
 
     // Save Button
     saveBtn.addEventListener('click', savePathsToLocalStorage);
@@ -69,58 +69,102 @@ function handleFileDrop(e) {
     e.stopPropagation();
     dropzone.classList.remove('dragover');
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        fileInput.files = files;
-        handleFileSelect();
+    // ใน Desktop Mode ให้เปิด File Dialog แทน (เพราะ Browser File API มี limitation)
+    if (DESKTOP_MODE) {
+        handleBrowseClick();
+    } else {
+        // Fallback: ใช้ Browser File API
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect();
+        }
     }
 }
 
-function handleFileSelect() {
-    const file = fileInput.files[0];
-    if (!file) return;
+async function handleBrowseClick() {
+    const filePath = await eel.select_file_dialog()();
+    if (filePath) {
+        showStatus('⏳ กำลังตรวจสอบไฟล์...', 'loading');
+        await previewFile(filePath);
+    }
+}
 
-    // Check file type
-    if (!['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(file.type)) {
-        showStatus('❌ กรุณาเลือกไฟล์ Excel (.xlsx หรือ .xls)', 'error');
+// ==================== PREVIEW FILE ====================
+async function previewFile(filePath) {
+    try {
+        const preview = await eel.preview_excel_file(filePath)();
+        
+        if (!preview.success) {
+            showStatus(`❌ ${preview.message}`, 'error');
+            return;
+        }
+        
+        // เก็บข้อมูล preview ไว้สำหรับการประมวลผลจริง ๆ
+        currentPreviewData = preview;
+        
+        // แสดง Preview Modal
+        showPreviewModal(preview);
+        
+    } catch (error) {
+        console.error('Preview error:', error);
+        showStatus(`❌ Error: ${error.message}`, 'error');
+    }
+}
+
+// ==================== SHOW PREVIEW MODAL ====================
+function showPreviewModal(preview) {
+    const modal = document.getElementById('previewModal');
+    if (!modal) {
+        console.error('Preview modal not found');
         return;
     }
-
-    // Send file to backend
-    uploadFile(file);
+    
+    // อัปเดตข้อมูลใน modal
+    document.getElementById('previewFileName').textContent = preview.file_name;
+    document.getElementById('previewTotalRows').textContent = preview.total_rows;
+    document.getElementById('previewBranch').textContent = preview.branch_name || 'ไม่พบ';
+    document.getElementById('previewBranchCode').textContent = preview.detected_branch || '-';
+    document.getElementById('previewSPCount').textContent = preview.sp_count || 0;
+    document.getElementById('previewWHCount').textContent = preview.wh_count || 0;
+    
+    // แสดง modal
+    modal.style.display = 'flex';
+    statusMessage.style.display = 'none';  // ซ่อน status message
 }
 
-// ==================== FILE UPLOAD ====================
-async function uploadFile(file) {
-    showStatus('⏳ กำลังอัปโหลดและประมวลผลไฟล์...', 'loading');
+function closePreviewModal() {
+    const modal = document.getElementById('previewModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentPreviewData = null;
+}
 
-    const formData = new FormData();
-    formData.append('file', file);
-
-    // Get current paths from input fields
-    const paths = getCurrentPathsConfig();
-    formData.append('paths_config', JSON.stringify(paths));
-
+// ==================== CONFIRM PROCESS ====================
+async function confirmProcess() {
+    if (!currentPreviewData) {
+        showStatus('❌ ไม่มีข้อมูลไฟล์', 'error');
+        return;
+    }
+    
+    closePreviewModal();
+    showStatus('⏳ กำลังประมวลผลไฟล์...', 'loading');
+    
     try {
-        const response = await fetch(`${API_BASE_URL}/upload`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'เกิดข้อผิดพลาดในการประมวลผล');
-        }
-
-        const result = await response.json();
-        showStatus(`✅ ${result.message}`, 'success');
+        const paths = getCurrentPathsConfig();
+        const result = await eel.process_file_from_desktop(currentPreviewData.file_path, paths)();
         
-        // Display detected branch
-        if (result.detected_branch) {
-            updateBranchDisplay(result.detected_branch);
+        if (result.success) {
+            showStatus(`✅ ${result.message}`, 'success');
+            if (result.detected_branch) {
+                updateBranchDisplay(result.detected_branch);
+            }
+        } else {
+            showStatus(`❌ ${result.message}`, 'error');
         }
     } catch (error) {
-        console.error('Upload error:', error);
+        console.error('Processing error:', error);
         showStatus(`❌ เกิดข้อผิดพลาด: ${error.message}`, 'error');
     }
 }
