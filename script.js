@@ -64,19 +64,48 @@ function handleDragLeave(e) {
     dropzone.classList.remove('dragover');
 }
 
-function handleFileDrop(e) {
+async function handleFileDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     dropzone.classList.remove('dragover');
 
-    // ใน Desktop Mode ให้เปิด File Dialog แทน (เพราะ Browser File API มี limitation)
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    showStatus('⏳ กำลังอัปโหลดและเตรียมไฟล์...', 'loading');
+    
+    // ใน Desktop Mode ให้อ่านไฟล์เป็น base64 แล้วส่งให้ Python
     if (DESKTOP_MODE) {
-        handleBrowseClick();
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            const result = event.target.result;
+            // แยกส่วนที่เป็น base64 data ออกจาก data URL prefix
+            const base64Data = result.includes(',') ? result.split(',')[1] : result;
+            
+            try {
+                // บันทึกไฟล์ลงในโฟลเดอร์ temp ฝั่ง backend
+                const tempPath = await eel.save_temp_file(file.name, base64Data)();
+                if (tempPath) {
+                    showStatus('⏳ กำลังตรวจสอบไฟล์...', 'loading');
+                    await previewFile(tempPath);
+                } else {
+                    showStatus('❌ ไม่สามารถสร้างไฟล์ชั่วคราวได้', 'error');
+                }
+            } catch (err) {
+                console.error("Eel error:", err);
+                showStatus(`❌ Error: ${err.message}`, 'error');
+            }
+        };
+        reader.onerror = function() {
+            showStatus('❌ เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
+        };
+        // อ่านเป็น Data URL (Base64)
+        reader.readAsDataURL(file);
     } else {
-        // Fallback: ใช้ Browser File API
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
+        // Fallback สำหรับ Web Mode (ถ้ามี)
+        fileInput.files = files;
+        if (typeof handleFileSelect === 'function') {
             handleFileSelect();
         }
     }
@@ -128,6 +157,11 @@ function showPreviewModal(preview) {
     document.getElementById('previewSPCount').textContent = preview.sp_count || 0;
     document.getElementById('previewWHCount').textContent = preview.wh_count || 0;
     
+    // อัปเดต branch display ด้วย
+    if (preview.detected_branch) {
+        updateBranchDisplay(preview.detected_branch);
+    }
+    
     // แสดง modal
     modal.style.display = 'flex';
     statusMessage.style.display = 'none';  // ซ่อน status message
@@ -148,12 +182,15 @@ async function confirmProcess() {
         return;
     }
     
+    // เก็บข้อมูลไว้ก่อน เพราะ closePreviewModal จะ clear currentPreviewData
+    const previewData = { ...currentPreviewData };
+    
     closePreviewModal();
     showStatus('⏳ กำลังประมวลผลไฟล์...', 'loading');
     
     try {
         const paths = getCurrentPathsConfig();
-        const result = await eel.process_file_from_desktop(currentPreviewData.file_path, paths)();
+        const result = await eel.process_file_from_desktop(previewData.file_path, paths)();
         
         if (result.success) {
             showStatus(`✅ ${result.message}`, 'success');

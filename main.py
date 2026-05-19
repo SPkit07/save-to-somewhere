@@ -8,12 +8,15 @@ import json
 import traceback
 from pathlib import Path
 from typing import Dict
+import numpy as np
 
 # Fix Unicode encoding สำหรับ Thai characters บน Windows
 if sys.platform == 'win32':
     import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    if sys.stdout is not None:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    if sys.stderr is not None:
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Import eel หลังจากที่แน่ใจว่า web directory ตั้งค่าถูก
 try:
@@ -88,6 +91,10 @@ def preview_excel_file(file_path: str) -> Dict:
         # Read Excel
         df = pd.read_excel(file_path)
         
+        # 1. Clean Data like Save.ipynb
+        if "RECEIVE_PIECE" in df.columns:
+            df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
+            
         # Get basic info
         total_rows = len(df)
         columns = list(df.columns)
@@ -100,7 +107,10 @@ def preview_excel_file(file_path: str) -> Dict:
             }
         
         # Extract branch code
-        branch_codes = df["ReBplus"].astype(str).str.split(",").str.get(2).str.strip().unique()
+        sku_str = df["ReBplus"].astype(str).str.strip()
+        extracted_code = sku_str.str.split(",").str.get(2).str.strip()
+        
+        branch_codes = extracted_code.unique()
         detected_branch = None
         for code in ["11", "21", "31", "41", "51"]:
             if code in branch_codes:
@@ -111,14 +121,31 @@ def preview_excel_file(file_path: str) -> Dict:
         
         branch_name = BRANCH_NAMES.get(detected_branch, "Unknown") if detected_branch else "ไม่พบ"
         
-        # Count types (SP vs WH)
-        type_col = "1=SP,2=WH"
+        # Count types (SP vs WH) using EXACT Save.ipynb logic
         sp_count = 0
         wh_count = 0
         
-        if type_col in columns:
-            sp_count = len(df[df[type_col] == 1])
-            wh_count = len(df[df[type_col] == 2])
+        if detected_branch:
+            type_col_name = "1=SP,2=WH"
+            if type_col_name in df.columns:
+                col_type = df[type_col_name]
+            else:
+                alt_name = [c for c in df.columns if "1=" in str(c) or "WH" in str(c)]
+                col_type = df[alt_name[0]] if alt_name else df.iloc[:, 1]
+                
+            # SP Count
+            if detected_branch == "SP":
+                cond_main = (extracted_code == "00")
+            else:
+                cond_main = col_type.isin([1, 1.0, "1", "1.0"]) & (extracted_code == detected_branch)
+            sp_count = len(df.loc[cond_main, "ReBplus"])
+            
+            # WH Count
+            if detected_branch == "SP":
+                wh_count = 0
+            else:
+                cond_00 = (col_type.isin([2, 2.0, "2", "2.0"]) | col_type.isna() | (col_type.astype(str).str.strip() == "nan")) & (extracted_code == "00")
+                wh_count = len(df.loc[cond_00, "ReBplus"])
         
         return {
             "success": True,
@@ -242,6 +269,33 @@ def select_directory_dialog() -> str:
     
     except Exception as e:
         logger.error(f"Error in directory dialog: {e}")
+        return ""
+
+
+@eel.expose
+def save_temp_file(filename: str, base64_data: str) -> str:
+    """
+    บันทึกไฟล์ชั่วคราวจากการลากวาง (Drag & Drop)
+    """
+    try:
+        import base64
+        import os
+        from pathlib import Path
+        
+        temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_uploads")
+        Path(temp_dir).mkdir(exist_ok=True)
+        
+        temp_path = os.path.join(temp_dir, filename)
+        
+        # decode base64 string
+        with open(temp_path, "wb") as fh:
+            fh.write(base64.b64decode(base64_data))
+            
+        logger.info(f"Saved dropped file to {temp_path}")
+        return temp_path
+        
+    except Exception as e:
+        logger.error(f"Error saving temp file: {e}")
         return ""
 
 

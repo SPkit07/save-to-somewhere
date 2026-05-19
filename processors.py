@@ -147,8 +147,8 @@ def get_thai_date_suffix() -> str:
         Date suffix string
     """
     now = datetime.now()
-    thai_year = (now.year + 543 - 2500)
-    return DATE_FORMAT_THAI.format(thai_year).replace("%d", str(now.day)).replace("%m", str(now.month))
+    thai_year = now.year + 543 - 2500
+    return f"{now.day}-{now.month}-{thai_year} รับ"
 
 def save_output_file(filepath: str, data: pd.Series) -> bool:
     """
@@ -216,14 +216,7 @@ def process_excel_file(
     paths_config: Dict[str, str]
 ) -> Dict:
     """
-    ประมวลผลไฟล์ Excel หลัก
-    
-    Args:
-        file_path: Path to Excel file
-        paths_config: User-provided paths configuration
-    
-    Returns:
-        Processing result dictionary
+    ประมวลผลไฟล์ Excel หลัก (ทำตาม Save.ipynb แบบเป๊ะๆ)
     """
     logger.info(f"Starting file processing: {file_path}")
     
@@ -232,97 +225,100 @@ def process_excel_file(
         df = pd.read_excel(file_path)
         logger.info(f"Excel loaded: {df.shape[0]} rows, {df.shape[1]} columns")
         
-        # ===== 2. Validate Structure =====
-        is_valid, error_msg = validate_excel_structure(df)
-        if not is_valid:
-            return {
-                "success": False,
-                "message": error_msg,
-                "detected_branch": None
-            }
+        # ===== 2. Validation like Save.ipynb =====
+        if "1=SP,2=WH" in df.columns:
+            if (df["1=SP,2=WH"] == 0).any():
+                msg = "❌ [ERROR]: ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH ซึ่งไม่ถูกต้อง!"
+                logger.error(msg)
+                return {"success": False, "message": msg, "detected_branch": None}
+                
+        # ===== 3. Clean Data like Save.ipynb =====
+        if "RECEIVE_PIECE" in df.columns:
+            df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
+            logger.info("🧹 เคลียร์ค่าว่างสำหรับแถวที่ RECEIVE_PIECE == 0 เรียบร้อยแล้ว")
+            
+        # Date Suffix
+        now = datetime.now()
+        thai_year = now.year + 543 - 2500
+        DATE_SUFFIX = f"{now.day}-{now.month}-{thai_year} รับ"
         
-        # ===== 3. Clean Data =====
-        df = clean_excel_data(df)
-        
-        # ===== 4. Detect Branch =====
-        detected_branch = detect_file_branch(df)
-        if not detected_branch:
-            msg = "❌ ไม่พบโครงสร้างรหัสสาขาที่ถูกต้องในไฟล์"
+        # ===== 4. Detect Branch like Save.ipynb =====
+        if "ReBplus" not in df.columns:
+            msg = "❌ ไม่พบ Column 'ReBplus'"
+            return {"success": False, "message": msg, "detected_branch": None}
+            
+        all_codes = df["ReBplus"].astype(str).str.split(",").str.get(2).str.strip().unique()
+        current_branch = None
+        for branch_code in ["11", "21", "31", "41", "51"]:
+            if branch_code in all_codes:
+                current_branch = branch_code
+                break
+        if not current_branch and "00" in all_codes:
+            current_branch = "SP"
+            
+        if current_branch is None:
+            msg = "❌ ไม่พบโครงสร้างรหัสสาขาที่ถูกต้องในไฟล์นี้  ไม่สามารถประมวลผลได้"
             logger.error(msg)
-            return {
-                "success": False,
-                "message": msg,
-                "detected_branch": None
-            }
+            return {"success": False, "message": msg, "detected_branch": None}
+            
+        # ===== 5. Processing like Save.ipynb =====
+        sku_str = df["ReBplus"].astype(str).str.strip()
+        extracted_code = sku_str.str.split(",").str.get(2).str.strip()
         
-        # ===== 5. Merge Paths =====
-        merged_paths = merge_paths(paths_config)
-        logger.info(f"Using paths for branch {detected_branch}")
-        
-        # ===== 6. Extract Branch Info =====
-        branch_name = BRANCH_NAMES.get(detected_branch, detected_branch)
-        date_suffix = get_thai_date_suffix()
-        
-        # ===== 7. Extract Data & Codes =====
-        extracted_code = extract_middle_code(df)
-        col_type = get_type_column(df)
-        
+        type_col_name = "1=SP,2=WH"
+        if type_col_name in df.columns:
+            col_type = df[type_col_name]
+        else:
+            alt_name = [c for c in df.columns if "1=" in str(c) or "WH" in str(c)]
+            col_type = df[alt_name[0]] if alt_name else df.iloc[:, 1]
+            
+        b_name = BRANCH_NAMES.get(current_branch, current_branch)
         results = []
         
-        # ===== 8. Filter & Save Front Store (SP) =====
-        logger.info(f"Processing {branch_name} data...")
+        merged_paths = paths_config if paths_config else {}
         
-        if detected_branch == "SP":
+        # 🏪 [ส่วนที่ 1] กรองผ่านคอลัมน์ประเภท == 1 (หน้าร้าน)
+        if current_branch == "SP":
             cond_main = (extracted_code == "00")
         else:
-            cond_main = col_type.isin([1, 1.0, "1", "1.0"]) & (extracted_code == detected_branch)
-        
+            cond_main = col_type.isin([1, 1.0, "1", "1.0"]) & (extracted_code == current_branch)
+            
         main_data = df.loc[cond_main, "ReBplus"]
         
         if not main_data.empty:
-            main_file_name = f"{branch_name}-SP-{date_suffix}.txt"
-            main_path = merged_paths.get(detected_branch)
-            
+            main_file_name = f"{b_name}-SP-{DATE_SUFFIX}.txt"
+            main_path = merged_paths.get(current_branch)
             if main_path and ensure_directory_exists(main_path):
                 main_full_path = os.path.join(main_path, main_file_name)
-                if save_output_file(main_full_path, main_data):
-                    results.append(f"🏪 เซฟหน้าร้าน: {main_file_name} ({len(main_data)} แถว)")
-        
-        # ===== 9. Filter & Save Warehouse (WH) =====
-        if detected_branch == "SP":
-            data_00 = pd.Series([])
+                with open(main_full_path, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(main_data.astype(str).tolist()))
+                results.append(f"🏪 เซฟหน้าร้านสำเร็จ: {main_full_path} (รวม {len(main_data)} แถว)")
+                
+        # 🏢 [ส่วนที่ 2] กรองผ่านคอลัมน์ประเภท == 2 (โกดัง)
+        if current_branch == "SP":
+            data_00 = []
         else:
-            cond_00 = (
-                col_type.isin([2, 2.0, "2", "2.0"]) | 
-                col_type.isna() | 
-                (col_type.astype(str).str.strip() == "nan")
-            ) & (extracted_code == "00")
+            cond_00 = (col_type.isin([2, 2.0, "2", "2.0"]) | col_type.isna() | (col_type.astype(str).str.strip() == "nan")) & (extracted_code == "00")
             data_00 = df.loc[cond_00, "ReBplus"]
-        
-        if isinstance(data_00, pd.Series) and not data_00.empty:
-            file_name_00 = f"{branch_name}-WH-{date_suffix}.txt"
-            key_00 = f"{detected_branch}_00"
-            path_00 = merged_paths.get(key_00)
             
+        if not (isinstance(data_00, list) or data_00.empty):
+            file_name_00 = f"{b_name}-WH-{DATE_SUFFIX}.txt"
+            key_00 = f"{current_branch}_00"
+            path_00 = merged_paths.get(key_00)
             if path_00 and ensure_directory_exists(path_00):
                 full_path_00 = os.path.join(path_00, file_name_00)
-                if save_output_file(full_path_00, data_00):
-                    results.append(f"🏢 เซฟโกดัง: {file_name_00} ({len(data_00)} แถว)")
-        else:
-            if detected_branch != "SP":
-                logger.warning("No warehouse data found for filtering")
+                with open(full_path_00, 'w', encoding='utf-8') as f:
+                    f.write('\n'.join(data_00.astype(str).tolist()))
+                results.append(f"🏢 เซฟโกดังสำเร็จ  : {full_path_00} (รวม {len(data_00)} แถว)")
         
-        # ===== 10. Return Results =====
         if not results:
-            results.append("⚠️ ไม่มีข้อมูลที่ตรงกับเงื่อนไข")
-        
-        logger.info(f"Processing complete. Results: {len(results)}")
-        
+            results.append("⚠️ ประมวลผลสำเร็จ แต่ไม่ได้เซฟไฟล์ใดๆ (กรุณาตั้งค่า Path ให้ครบถ้วน)")
+            
         return {
             "success": True,
             "message": f"✅ ประมวลผลสำเร็จ!\n" + "\n".join(results),
-            "detected_branch": detected_branch,
-            "branch_name": branch_name,
+            "detected_branch": current_branch,
+            "branch_name": b_name,
             "files_saved": results
         }
         
