@@ -298,6 +298,39 @@ def save_temp_file(filename: str, base64_data: str) -> str:
         logger.error(f"Error saving temp file: {e}")
         return ""
 
+# ==================== CONFIG MANAGEMENT ====================
+def get_config_path() -> str:
+    """Get the path to the configuration file"""
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, "paths_config.json")
+
+@eel.expose
+def load_paths_config() -> Dict:
+    """Load paths config from file"""
+    config_path = get_config_path()
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading config from {config_path}: {e}")
+    return {}
+
+@eel.expose
+def save_paths_config(paths: Dict) -> bool:
+    """Save paths config to file"""
+    config_path = get_config_path()
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(paths, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving config to {config_path}: {e}")
+        return False
+
 
 # ==================== START DESKTOP APP ====================
 def start_app():

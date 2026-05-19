@@ -248,28 +248,56 @@ function initializeBranchPaths() {
     branchPathsContainer.innerHTML = html;
 }
 
-// ==================== LOCALSTORAGE MANAGEMENT ====================
-function savePathsToLocalStorage() {
+// ==================== LOCALSTORAGE / BACKEND MANAGEMENT ====================
+async function savePathsToLocalStorage() {
     const paths = getCurrentPathsConfig();
-    localStorage.setItem('pathsConfig', JSON.stringify(paths));
-    showStatus('✅ บันทึกการตั้งค่า Path สำเร็จแล้ว!', 'success');
+    
+    if (DESKTOP_MODE) {
+        try {
+            const success = await eel.save_paths_config(paths)();
+            if (success) {
+                showStatus('✅ บันทึกการตั้งค่า Path สำเร็จแล้ว!', 'success');
+            } else {
+                showStatus('❌ ไม่สามารถบันทึกการตั้งค่า Path ได้', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving config to backend:', error);
+            showStatus('❌ ไม่สามารถเชื่อมต่อกับระบบหลักได้', 'error');
+        }
+    } else {
+        localStorage.setItem('pathsConfig', JSON.stringify(paths));
+        showStatus('✅ บันทึกการตั้งค่า Path สำเร็จแล้ว!', 'success');
+    }
 }
 
-function loadPathsFromLocalStorage() {
-    const saved = localStorage.getItem('pathsConfig');
-    if (!saved) return;
-
-    try {
-        const paths = JSON.parse(saved);
-        Object.keys(paths).forEach(key => {
-            const input = document.querySelector(`input[data-key="${key}"]`);
-            if (input) {
-                input.value = paths[key];
+async function loadPathsFromLocalStorage() {
+    let paths = {};
+    
+    if (DESKTOP_MODE) {
+        try {
+            paths = await eel.load_paths_config()();
+        } catch (error) {
+            console.error('Error loading config from backend:', error);
+        }
+    } else {
+        const saved = localStorage.getItem('pathsConfig');
+        if (saved) {
+            try {
+                paths = JSON.parse(saved);
+            } catch (error) {
+                console.error('Error parsing localStorage:', error);
             }
-        });
-    } catch (error) {
-        console.error('Error loading paths from localStorage:', error);
+        }
     }
+
+    if (!paths || Object.keys(paths).length === 0) return;
+
+    Object.keys(paths).forEach(key => {
+        const input = document.querySelector(`input[data-key="${key}"]`);
+        if (input) {
+            input.value = paths[key];
+        }
+    });
 }
 
 function getCurrentPathsConfig() {
