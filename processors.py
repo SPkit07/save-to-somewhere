@@ -103,21 +103,21 @@ def clean_excel_data(df: pd.DataFrame) -> pd.DataFrame:
 # ==================== PATH MANAGEMENT ====================
 def merge_paths(user_paths: Dict[str, str]) -> Dict[str, str]:
     """
-    รวม user paths กับ default paths
-    User paths มีความสำคัญมากกว่า (override)
+    ตรวจสอบว่า user ระบุ paths ทั้งหมดเอง
+    ไม่มีค่าเริ่มต้น - ผู้ใช้จำเป็นต้องระบุเอง
     
     Args:
         user_paths: User-provided paths
     
     Returns:
-        Merged paths dictionary
+        User paths (no defaults merged)
     """
-    merged = DEFAULT_PATHS.copy()
-    if user_paths:
-        merged.update(user_paths)
-        logger.info(f"Merged {len(user_paths)} user paths with defaults")
+    if not user_paths:
+        logger.warning("No paths provided by user. All paths must be specified explicitly.")
+        return {}
     
-    return merged
+    logger.info(f"Using {len(user_paths)} user-provided paths")
+    return user_paths
 
 def ensure_directory_exists(path: str) -> bool:
     """

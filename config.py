@@ -34,19 +34,8 @@ BRANCH_NAMES = {
     '51': 'K5'
 }
 
-DEFAULT_PATHS: Dict[str, str] = {
-    "11": r"C:\Users\USER\Desktop\11",
-    "11_00": r"C:\Users\USER\Desktop\1100",
-    "21": r"C:\Users\USER\Desktop\21",
-    "21_00": r"C:\Users\USER\Desktop\2100",
-    "31": r"C:\Users\USER\Desktop\31",
-    "31_00": r"C:\Users\USER\Desktop\3100",
-    "41": r"C:\Users\USER\Desktop\41",
-    "41_00": r"C:\Users\USER\Desktop\4100",
-    "51": r"C:\Users\USER\Desktop\51",
-    "51_00": r"C:\Users\USER\Desktop\5100",
-    "SP": r"C:\Users\USER\Desktop\SP00"
-}
+# ไม่มีค่าเริ่มต้น - ผู้ใช้ต้องระบุ Path เอง
+DEFAULT_PATHS: Dict[str, str] = {}
 
 # ==================== EXCEL FILE SETTINGS ====================
 ALLOWED_FILE_TYPES = ['.xlsx', '.xls']

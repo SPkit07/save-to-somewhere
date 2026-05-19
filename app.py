@@ -102,14 +102,17 @@ def health_check() -> HealthCheckResponse:
 @app.get("/config/default-paths", response_model=ConfigResponse)
 def get_default_paths() -> ConfigResponse:
     """
-    ดึงค่า Path เริ่มต้น
+    ดึงการตั้งค่า Paths
+    
+    ⚠️ ไม่มีค่า Path เริ่มต้น - ผู้ใช้ต้องระบุ Path เองทุกครั้ง
     
     Returns:
-        ConfigResponse: Default paths configuration
+        ConfigResponse: Branches information (paths will be empty - user must provide)
     """
-    logger.debug("Fetching default paths configuration")
+    logger.debug("Fetching paths configuration")
+    logger.warning("No default paths configured. Users must provide paths explicitly.")
     return ConfigResponse(
-        paths=DEFAULT_PATHS,
+        paths=DEFAULT_PATHS,  # ✓ Empty - users must specify
         branches=BRANCH_NAMES
     )
 
@@ -136,14 +139,17 @@ def get_info() -> Dict:
 @app.post("/upload", response_model=ProcessFileResponse)
 async def upload_file(
     file: UploadFile = File(...),
-    paths_config: str = Form(default="{}")
+    paths_config: str = Form(...)
 ) -> ProcessFileResponse:
     """
     รับไฟล์ Excel และการตั้งค่า Path แล้วประมวลผล
     
+    ⚠️ paths_config เป็นพารามิเตอร์บังคับ - ไม่มีค่า Path เริ่มต้น
+    
     Parameters:
         file: ไฟล์ Excel ที่อัปโหลด
-        paths_config: JSON string ของ Path configuration
+        paths_config: JSON string ของ Path configuration (บังคับ - ผู้ใช้ต้องระบุเอง)
+                      เช่น: {"11": "C:\\path\\to\\11", "21": "C:\\path\\to\\21"}
     
     Returns:
         ProcessFileResponse: Processing result with status and details
@@ -163,6 +169,14 @@ async def upload_file(
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in paths_config: {str(e)}")
             paths_dict = {}
+        
+        # Validate that paths are provided
+        if not paths_dict:
+            logger.error("No paths provided - paths_config is required and cannot be empty")
+            raise HTTPException(
+                status_code=400, 
+                detail="❌ ERROR: paths_config is required - must provide at least one path. Example: {\"11\": \"C:\\\\path\\\\to\\\\11\"}"
+            )
         
         # Save uploaded file to temporary location
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
