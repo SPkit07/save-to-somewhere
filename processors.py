@@ -231,6 +231,47 @@ def process_excel_file(
                 msg = "❌ [ERROR]: ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH ซึ่งไม่ถูกต้อง!"
                 logger.error(msg)
                 return {"success": False, "message": msg, "detected_branch": None}
+
+        # ตรวจสอบคอลัมน์ J และ K (คอลัมน์ที่มีชื่อ "1=SP,2=WH" ซ้ำกัน)
+        # pandas จะตั้งชื่อคอลัมน์ที่ซ้ำกันเช่น "1=SP,2=WH" และ "1=SP,2=WH.1"
+        type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
+        if len(type_cols) >= 2:
+            col1, col2 = type_cols[0], type_cols[1]
+            
+            # จัดการแปลงชนิดข้อมูลเพื่อเปรียบเทียบ (ลบ .0 กรณีเป็น float และตัดช่องว่าง)
+            val1 = df[col1].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+            val2 = df[col2].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+            
+            mismatch_mask = val1 != val2
+            
+            if mismatch_mask.any():
+                mismatched_df = df[mismatch_mask]
+                
+                # หาคอลัมน์ GOODS_CODE
+                goods_code_col = "GOODS_CODE" if "GOODS_CODE" in df.columns else None
+                
+                # พยายามหาคอลัมน์ชื่อสินค้าจากชื่อที่พบบ่อย
+                prod_name_col = None
+                for candidate in ["GOODS_NAME", "PRODUCT_NAME", "ITEM_NAME", "ชื่อสินค้า", "GOODS_DESC"]:
+                    if candidate in df.columns:
+                        prod_name_col = candidate
+                        break
+                        
+                error_details = []
+                for _, row in mismatched_df.iterrows():
+                    code = row[goods_code_col] if goods_code_col and pd.notna(row[goods_code_col]) else "ไม่ระบุรหัส"
+                    name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "ไม่ระบุชื่อ"
+                    error_details.append(f"รหัสสินค้า: {code} | ชื่อสินค้า: {name}")
+                
+                # แสดงแค่ 10 รายการแรกกันข้อความล้น
+                if len(error_details) > 10:
+                    display_errors = error_details[:10] + [f"... และอีก {len(error_details) - 10} รายการที่ไม่ตรงกัน"]
+                else:
+                    display_errors = error_details
+                    
+                msg = f"❌ [ERROR]: ข้อมูลในคอลัมน์ J และ K (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:\n" + "\n".join(display_errors)
+                logger.error("Column J and K (1=SP,2=WH) mismatch detected")
+                return {"success": False, "message": msg, "detected_branch": None}
                 
         # ===== 3. Clean Data like Save.ipynb =====
         if "RECEIVE_PIECE" in df.columns:
