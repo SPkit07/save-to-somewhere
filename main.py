@@ -99,18 +99,19 @@ def preview_excel_file(file_path: str) -> Dict:
         jk_mismatch_details = []
         jk_has_zero = False
         
-        if "1=SP,2=WH" in df.columns:
-            if (df["1=SP,2=WH"] == 0).any():
+        # คอลัมน์ J = index 9, คอลัมน์ K = index 10
+        if len(df.columns) > 10:
+            col_j = df.columns[9]
+            col_k = df.columns[10]
+            
+            # เช็คว่ามีค่า 0 ในคอลัมน์ J หรือ K หรือไม่
+            if (df[col_j] == 0).any() or (df[col_k] == 0).any():
                 jk_has_zero = True
-
-        type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
-        if len(type_cols) >= 2:
-            col1, col2 = type_cols[0], type_cols[1]
+                
+            val_j = df[col_j].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+            val_k = df[col_k].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
             
-            val1 = df[col1].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
-            val2 = df[col2].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
-            
-            mismatch_mask = val1 != val2
+            mismatch_mask = val_j != val_k
             
             if mismatch_mask.any():
                 mismatched_df = df[mismatch_mask]
@@ -128,8 +129,8 @@ def preview_excel_file(file_path: str) -> Dict:
                 for idx, (row_idx, row) in enumerate(mismatched_df.iterrows(), 1):
                     code = row[goods_code_col] if goods_code_col and pd.notna(row[goods_code_col]) else "ไม่ระบุรหัส"
                     name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "ไม่ระบุชื่อ"
-                    col_j_val = row[col1] if pd.notna(row[col1]) else "-"
-                    col_k_val = row[col2] if pd.notna(row[col2]) else "-"
+                    col_j_val = row[col_j] if pd.notna(row[col_j]) else "-"
+                    col_k_val = row[col_k] if pd.notna(row[col_k]) else "-"
                     
                     jk_mismatch_details.append({
                         "index": idx,

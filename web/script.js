@@ -132,12 +132,76 @@ async function previewFile(filePath) {
         // เก็บข้อมูล preview ไว้สำหรับการประมวลผลจริง ๆ
         currentPreviewData = preview;
         
-        // แสดง Preview Modal
-        showPreviewModal(preview);
+        // ตรวจสอบ Warning: ข้อมูลไม่ตรงกัน หรือมีค่าเป็น 0
+        if (preview.jk_has_zero || (preview.jk_mismatch && preview.jk_mismatch.length > 0)) {
+            showWarningModal(preview);
+        } else {
+            // แสดง Preview Modal ทันที
+            showPreviewModal(preview);
+        }
         
     } catch (error) {
         console.error('Preview error:', error);
         showStatus(`❌ Error: ${error.message}`, 'error');
+    }
+}
+
+// ==================== SHOW WARNING MODAL ====================
+function showWarningModal(preview) {
+    const modal = document.getElementById('warningModal');
+    if (!modal) return;
+    
+    const tbody = document.getElementById('warningTableBody');
+    const msg = document.getElementById('warningModalMessage');
+    
+    tbody.innerHTML = '';
+    
+    if (preview.jk_has_zero) {
+        msg.textContent = "ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH หรือข้อมูล J และ K ไม่ตรงกัน กรุณาตรวจสอบ:";
+    } else {
+        msg.textContent = "พบข้อมูลในคอลัมน์ J และ K (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:";
+    }
+    
+    if (preview.jk_mismatch && preview.jk_mismatch.length > 0) {
+        preview.jk_mismatch.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.code}</td>
+                <td>${item.name}</td>
+                <td class="mismatch">${item.col_j}</td>
+                <td class="mismatch">${item.col_k}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else if (preview.jk_has_zero) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td colspan="4" style="text-align: center; color: #e74c3c; font-weight: bold;">
+                พบค่า '0' ในคอลัมน์ประเภทการจัดส่ง
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+    
+    modal.style.display = 'flex';
+    statusMessage.style.display = 'none';
+}
+
+function closeWarningModal() {
+    const modal = document.getElementById('warningModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentPreviewData = null; // ยกเลิกการทำรายการ
+}
+
+function continueToPreview() {
+    const modal = document.getElementById('warningModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (currentPreviewData) {
+        showPreviewModal(currentPreviewData);
     }
 }
 

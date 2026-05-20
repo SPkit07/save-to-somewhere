@@ -452,6 +452,45 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
         }
+
+        /* ==================== WARNING TABLE ==================== */
+        .warning-table-container {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #ecf0f1;
+            border-radius: 6px;
+        }
+
+        .warning-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .warning-table th, .warning-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .warning-table th {
+            background-color: #f8fafb;
+            color: #2c3e50;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .warning-table tr:hover {
+            background-color: #fdfefe;
+        }
+
+        .warning-table td.mismatch {
+            color: #e74c3c;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -527,6 +566,42 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closePreviewModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="confirmProcess()">✅ ยืนยันและประมวลผล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== WARNING MODAL ==================== -->
+    <div class="modal" id="warningModal">
+        <div class="modal-content" style="border-top: 5px solid #f39c12; max-width: 650px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">
+                <h2>⚠️ คำเตือน: ข้อมูลไม่ตรงกัน</h2>
+                <button class="modal-close" onclick="closeWarningModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;" id="warningModalMessage">
+                    พบข้อมูลในคอลัมน์ J และ K (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:
+                </p>
+                <div class="warning-table-container">
+                    <table class="warning-table">
+                        <thead>
+                            <tr>
+                                <th>รหัสสินค้า</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>คอลัมน์ J</th>
+                                <th>คอลัมน์ K</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warningTableBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeWarningModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="continueToPreview()" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
