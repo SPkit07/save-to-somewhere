@@ -13,15 +13,8 @@ echo  Building Desktop Application (.exe)
 echo ===============================================
 echo.
 
-REM ตรวจสอบ venv
-if not exist "venv\Scripts\activate.bat" (
-    echo ❌ Virtual Environment ไม่พบ
-    echo กรุณารัน setup ก่อน
-    pause
-    exit /b 1
-)
-
-call venv\Scripts\activate.bat
+REM ใช้อินเทอร์พรีตเตอร์ Python หลักในเครื่อง
+echo Using global Python environment...
 
 echo.
 echo Step 1: ติดตั้ง build dependencies...
