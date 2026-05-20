@@ -531,6 +531,26 @@
         </div>
     </div>
 
+    <!-- ==================== ERROR MODAL ==================== -->
+    <div class="modal" id="errorModal">
+        <div class="modal-content" style="border-top: 5px solid #e74c3c;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <h2>⚠️ พบข้อผิดพลาด</h2>
+                <button class="modal-close" onclick="closeErrorModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div style="color: #c0392b; font-size: 15px; font-weight: 500; white-space: pre-wrap;" id="errorModalMessage">
+                    -
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeErrorModal()">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/eel.js"></script>
     <script src="script.js"></script>
 </body>

@@ -210,6 +210,96 @@ def get_type_column(df: pd.DataFrame) -> pd.Series:
     logger.warning("Using column index 1 as fallback")
     return df.iloc[:, 1]
 
+# ==================== COLUMN J & K VALIDATION ====================
+def check_columns_j_k_match(df: pd.DataFrame) -> Tuple[bool, list]:
+    """
+    ตรวจสอบว่าคอลัมน์ J และ K (ทั้งคู่มีชื่อ '1=SP,2=WH') ตรงกันหรือไม่
+    
+    Args:
+        df: DataFrame
+    
+    Returns:
+        Tuple of (all_match, error_details_list)
+        - all_match: True ถ้าทั้งหมดตรงกัน, False ถ้ามีที่ไม่ตรง
+        - error_details_list: List of dicts with mismatch information
+    """
+    try:
+        # ค้นหาคอลัมน์ที่มีชื่อ "1=SP,2=WH"
+        type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
+        
+        # ถ้าไม่มีหรือมีแค่อันเดียว ถือว่าไม่มีข้อมูลให้ตรวจสอบ
+        if len(type_cols) < 2:
+            logger.info("Found less than 2 columns with '1=SP,2=WH' - skipping J/K check")
+            return True, []
+        
+        col_j, col_k = type_cols[0], type_cols[1]
+        logger.info(f"Checking J & K match: {col_j} vs {col_k}")
+        
+        # แปลงค่าให้เป็นสตริง และลบช่องว่าง และลบ .0 (จากการแปลง float)
+        val_j = df[col_j].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+        val_k = df[col_k].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+        
+        # เปรียบเทียบ
+        mismatch_mask = val_j != val_k
+        
+        if not mismatch_mask.any():
+            logger.info("✅ All rows in columns J and K match perfectly")
+            return True, []
+        
+        # มีการไม่ตรงกัน - สร้างรายการ error details
+        mismatched_df = df[mismatch_mask].reset_index(drop=True)
+        logger.warning(f"⚠️ Found {len(mismatched_df)} mismatched rows")
+        
+        # ค้นหาคอลัมน์ GOODS_CODE
+        goods_code_col = "GOODS_CODE" if "GOODS_CODE" in df.columns else None
+        
+        # ค้นหาคอลัมน์ชื่อสินค้า (SKU_NAME หรือคอลัมน์ F)
+        prod_name_col = None
+        for candidate in ["SKU_NAME", "GOODS_NAME", "PRODUCT_NAME", "ITEM_NAME", "ชื่อสินค้า", "GOODS_DESC"]:
+            if candidate in df.columns:
+                prod_name_col = candidate
+                logger.info(f"Found product name column: {candidate}")
+                break
+        
+        # Fallback ไปที่คอลัมน์ F (index 5)
+        if not prod_name_col and len(df.columns) > 5:
+            prod_name_col = df.columns[5]
+            logger.info(f"Using column F as product name: {prod_name_col}")
+        
+        error_details = []
+        for idx, row in mismatched_df.iterrows():
+            # ดึงข้อมูล GOODS_CODE
+            code = ""
+            if goods_code_col and goods_code_col in row.index:
+                code = row[goods_code_col] if pd.notna(row[goods_code_col]) else ""
+            code = str(code).strip() if code else "-"
+            
+            # ดึงข้อมูล SKU_NAME หรือชื่อสินค้า
+            name = ""
+            if prod_name_col and prod_name_col in row.index:
+                name = row[prod_name_col] if pd.notna(row[prod_name_col]) else ""
+            name = str(name).strip() if name else "-"
+            
+            # ดึงค่าจากคอลัมน์ J และ K
+            col_j_val = str(row[col_j]).replace(".0", "").strip() if pd.notna(row[col_j]) else "-"
+            col_k_val = str(row[col_k]).replace(".0", "").strip() if pd.notna(row[col_k]) else "-"
+            
+            error_details.append({
+                "row": idx + 1,  # บันทึกแถวจริง (ไม่นับจาก 0)
+                "goods_code": code,
+                "sku_name": name,
+                "col_j": col_j_val,
+                "col_k": col_k_val
+            })
+        
+        logger.info(f"Generated {len(error_details)} error detail entries")
+        return False, error_details
+        
+    except Exception as e:
+        logger.error(f"Error checking J & K columns: {e}", exc_info=True)
+        # ถ้าเกิดข้อผิดพลาด ให้ถือว่าไม่มีการไม่ตรงกัน (ไม่ยุติการประมวลผล)
+        return True, []
+
 # ==================== MAIN PROCESSING FUNCTION ====================
 def process_excel_file(
     file_path: str,
@@ -228,50 +318,28 @@ def process_excel_file(
         # ===== 2. Validation like Save.ipynb =====
         if "1=SP,2=WH" in df.columns:
             if (df["1=SP,2=WH"] == 0).any():
-                msg = "❌ [ERROR]: ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH ซึ่งไม่ถูกต้อง!"
-                logger.error(msg)
-                return {"success": False, "message": msg, "detected_branch": None}
+                error_msg = "ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH ซึ่งไม่ถูกต้อง!"
+                logger.error(error_msg)
+                return {
+                    "success": False,
+                    "errors": ["[ERROR]", error_msg],
+                    "detected_branch": None,
+                    "message": error_msg
+                }
 
-        # ตรวจสอบคอลัมน์ J และ K (คอลัมน์ที่มีชื่อ "1=SP,2=WH" ซ้ำกัน)
-        # pandas จะตั้งชื่อคอลัมน์ที่ซ้ำกันเช่น "1=SP,2=WH" และ "1=SP,2=WH.1"
-        type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
-        if len(type_cols) >= 2:
-            col1, col2 = type_cols[0], type_cols[1]
-            
-            # จัดการแปลงชนิดข้อมูลเพื่อเปรียบเทียบ (ลบ .0 กรณีเป็น float และตัดช่องว่าง)
-            val1 = df[col1].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
-            val2 = df[col2].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
-            
-            mismatch_mask = val1 != val2
-            
-            if mismatch_mask.any():
-                mismatched_df = df[mismatch_mask]
-                
-                # หาคอลัมน์ GOODS_CODE
-                goods_code_col = "GOODS_CODE" if "GOODS_CODE" in df.columns else None
-                
-                # พยายามหาคอลัมน์ชื่อสินค้าจากชื่อที่พบบ่อย
-                prod_name_col = None
-                for candidate in ["GOODS_NAME", "PRODUCT_NAME", "ITEM_NAME", "ชื่อสินค้า", "GOODS_DESC"]:
-                    if candidate in df.columns:
-                        prod_name_col = candidate
-                        break
-                        
-                error_details = []
-                for _, row in mismatched_df.iterrows():
-                    code = row[goods_code_col] if goods_code_col and pd.notna(row[goods_code_col]) else "ไม่ระบุรหัส"
-                    name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "ไม่ระบุชื่อ"
-                    error_details.append(f"รหัสสินค้า: {code} | ชื่อสินค้า: {name}")
-                
-                # แสดงแค่ 10 รายการแรกกันข้อความล้น
-                if len(error_details) > 10:
-                    display_errors = error_details[:10] + [f"... และอีก {len(error_details) - 10} รายการที่ไม่ตรงกัน"]
-                else:
-                    display_errors = error_details
-                    
-                msg = f"❌ [ERROR]: ข้อมูลในคอลัมน์ J และ K (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:\n" + "\n".join(display_errors)
-                logger.error("Column J and K (1=SP,2=WH) mismatch detected")
-                return {"success": False, "message": msg, "detected_branch": None}
+        # ===== 2b. Check Column J & K Match (ตรวจสอบว่า J และ K ตรงกันหรือไม่) =====
+        j_k_match, j_k_mismatches = check_columns_j_k_match(df)
+        warnings = []
+        
+        if not j_k_match and j_k_mismatches:
+            warning_msg = f"⚠️ [WARNING]: ตรวจพบความไม่ตรงกันในคอลัมน์ J และ K ({len(j_k_mismatches)} รายการ)"
+            warnings.append({
+                "type": "j_k_mismatch",
+                "message": warning_msg,
+                "details": j_k_mismatches,
+                "count": len(j_k_mismatches)
+            })
+            logger.warning(warning_msg)
                 
         # ===== 3. Clean Data like Save.ipynb =====
         if "RECEIVE_PIECE" in df.columns:
@@ -285,8 +353,13 @@ def process_excel_file(
         
         # ===== 4. Detect Branch like Save.ipynb =====
         if "ReBplus" not in df.columns:
-            msg = "❌ ไม่พบ Column 'ReBplus'"
-            return {"success": False, "message": msg, "detected_branch": None}
+            error_msg = "ไม่พบ Column 'ReBplus'"
+            return {
+                "success": False,
+                "errors": ["[ERROR]", error_msg],
+                "detected_branch": None,
+                "message": error_msg
+            }
             
         all_codes = df["ReBplus"].astype(str).str.split(",").str.get(2).str.strip().unique()
         current_branch = None
@@ -298,9 +371,14 @@ def process_excel_file(
             current_branch = "SP"
             
         if current_branch is None:
-            msg = "❌ ไม่พบโครงสร้างรหัสสาขาที่ถูกต้องในไฟล์นี้  ไม่สามารถประมวลผลได้"
-            logger.error(msg)
-            return {"success": False, "message": msg, "detected_branch": None}
+            error_msg = "ไม่พบโครงสร้างรหัสสาขาที่ถูกต้องในไฟล์นี้  ไม่สามารถประมวลผลได้"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "errors": ["[ERROR]", error_msg],
+                "detected_branch": None,
+                "message": error_msg
+            }
             
         # ===== 5. Processing like Save.ipynb =====
         sku_str = df["ReBplus"].astype(str).str.strip()
@@ -355,19 +433,33 @@ def process_excel_file(
         if not results:
             results.append("⚠️ ประมวลผลสำเร็จ แต่ไม่ได้เซฟไฟล์ใดๆ (กรุณาตั้งค่า Path ให้ครบถ้วน)")
             
-        return {
+        summary_msg = f"ประมวลผลสำเร็จ!"
+        
+        # สร้าง response
+        response = {
             "success": True,
-            "message": f"✅ ประมวลผลสำเร็จ!\n" + "\n".join(results),
+            "message": summary_msg,
+            "summary": "\n".join(results),
             "detected_branch": current_branch,
             "branch_name": b_name,
             "files_saved": results
         }
         
+        # เพิ่ม warnings ถ้ามี
+        if warnings:
+            response["warnings"] = warnings
+            response["has_warnings"] = True
+        else:
+            response["has_warnings"] = False
+        
+        return response
+        
     except Exception as e:
         logger.error(f"Processing failed: {e}", exc_info=True)
         return {
             "success": False,
-            "message": f"❌ เกิดข้อผิดพลาด: {str(e)}",
+            "message": f"เกิดข้อผิดพลาด: {str(e)}",
+            "errors": ["[ERROR]", str(e)],
             "detected_branch": None,
             "error_details": str(e)
         }

@@ -95,6 +95,51 @@ def preview_excel_file(file_path: str) -> Dict:
         if "RECEIVE_PIECE" in df.columns:
             df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
             
+        # 2. Validation for 1=SP,2=WH mismatch (Column J vs K)
+        jk_mismatch_details = []
+        jk_has_zero = False
+        
+        if "1=SP,2=WH" in df.columns:
+            if (df["1=SP,2=WH"] == 0).any():
+                jk_has_zero = True
+
+        type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
+        if len(type_cols) >= 2:
+            col1, col2 = type_cols[0], type_cols[1]
+            
+            val1 = df[col1].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+            val2 = df[col2].fillna("").astype(str).str.strip().str.replace(r'\.0$', '', regex=True)
+            
+            mismatch_mask = val1 != val2
+            
+            if mismatch_mask.any():
+                mismatched_df = df[mismatch_mask]
+                
+                # GOODS_CODE column
+                goods_code_col = "GOODS_CODE" if "GOODS_CODE" in df.columns else None
+                
+                # SKU_NAME: ใช้คอลัมน์ SKU_NAME หรือ Column F (index 5) เป็น fallback
+                prod_name_col = None
+                if "SKU_NAME" in df.columns:
+                    prod_name_col = "SKU_NAME"
+                elif len(df.columns) > 5:
+                    prod_name_col = df.columns[5]  # Column F
+                        
+                for idx, (row_idx, row) in enumerate(mismatched_df.iterrows(), 1):
+                    code = row[goods_code_col] if goods_code_col and pd.notna(row[goods_code_col]) else "ไม่ระบุรหัส"
+                    name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "ไม่ระบุชื่อ"
+                    col_j_val = row[col1] if pd.notna(row[col1]) else "-"
+                    col_k_val = row[col2] if pd.notna(row[col2]) else "-"
+                    
+                    jk_mismatch_details.append({
+                        "index": idx,
+                        "row_num": int(row_idx) + 2,
+                        "code": str(code).strip(),
+                        "name": str(name).strip(),
+                        "col_j": str(col_j_val).replace(".0", "").strip(),
+                        "col_k": str(col_k_val).replace(".0", "").strip()
+                    })
+            
         # Get basic info
         total_rows = len(df)
         columns = list(df.columns)
@@ -156,7 +201,9 @@ def preview_excel_file(file_path: str) -> Dict:
             "branch_name": branch_name,
             "sp_count": int(sp_count),
             "wh_count": int(wh_count),
-            "columns": columns[:5]
+            "columns": columns[:5],
+            "jk_mismatch": jk_mismatch_details,
+            "jk_has_zero": jk_has_zero
         }
     
     except Exception as e:
@@ -186,7 +233,8 @@ def process_file_from_desktop(file_path: str, paths_config: Dict[str, str]) -> D
         if not os.path.exists(file_path):
             return {
                 "success": False,
-                "message": f"❌ ไฟล์ไม่พบ: {file_path}",
+                "message": "ไฟล์ไม่พบ",
+                "errors": ["[ERROR]", f"ไฟล์ไม่พบ: {file_path}"],
                 "error_details": "File not found"
             }
         
@@ -194,7 +242,8 @@ def process_file_from_desktop(file_path: str, paths_config: Dict[str, str]) -> D
         if not file_path.lower().endswith(('.xlsx', '.xls')):
             return {
                 "success": False,
-                "message": "❌ ไฟล์ต้องเป็น Excel (.xlsx หรือ .xls)",
+                "message": "ไฟล์ไม่ถูกต้อง",
+                "errors": ["[ERROR]", "ไฟล์ต้องเป็น Excel (.xlsx หรือ .xls)"],
                 "error_details": "Invalid file type"
             }
         
@@ -208,7 +257,8 @@ def process_file_from_desktop(file_path: str, paths_config: Dict[str, str]) -> D
         logger.error(f"Error processing file: {str(e)}", exc_info=True)
         return {
             "success": False,
-            "message": f"❌ Error: {str(e)}",
+            "message": f"เกิดข้อผิดพลาด: {str(e)}",
+            "errors": ["[ERROR]", str(e)],
             "error_details": traceback.format_exc()
         }
 

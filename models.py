@@ -2,7 +2,7 @@
 models.py - Pydantic Models for Request/Response
 """
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 # ==================== REQUEST MODELS ====================
 class ProcessFileRequest(BaseModel):
@@ -18,6 +18,8 @@ class ProcessFileResponse(BaseModel):
     branch_name: Optional[str] = None
     files_saved: List[str] = []
     error_details: Optional[str] = None
+    warnings: Optional[List[Dict[str, Any]]] = None
+    has_warnings: bool = False
 
 class HealthCheckResponse(BaseModel):
     """Health check response"""
