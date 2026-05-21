@@ -1,7 +1,7 @@
 @echo off
 REM ==========================================
 REM Build Desktop Application with PyInstaller
-REM with Install Option
+REM with Install & Update Options
 REM ==========================================
 
 setlocal enabledelayedexpansion
@@ -18,14 +18,16 @@ echo.
 echo   1 = Build .exe only
 echo   2 = Build and Install
 echo   3 = Install existing .exe
+echo   4 = Update existing installation
 echo   0 = Exit
 echo.
-set /p choice="Enter your choice (0-3): "
+set /p choice="Enter your choice (0-4): "
 
 if "%choice%"=="0" exit /b 0
 if "%choice%"=="1" goto BUILD_ONLY
 if "%choice%"=="2" goto BUILD_AND_INSTALL
 if "%choice%"=="3" goto INSTALL_ONLY
+if "%choice%"=="4" goto UPDATE_INSTALL
 
 echo Invalid choice! Exiting...
 pause
@@ -110,6 +112,34 @@ echo.
 pause
 exit /b 0
 
+:UPDATE_INSTALL
+cls
+echo.
+echo ===============================================
+echo  Step 1: Building Desktop Application (.exe)
+echo ===============================================
+echo.
+
+call :BUILD_EXE
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
+echo.
+echo ===============================================
+echo  Step 2: Updating Installation
+echo ===============================================
+echo.
+
+call :UPDATE_APP
+if %ERRORLEVEL% NEQ 0 exit /b 1
+
+echo.
+echo ===============================================
+echo  ✅ Update Complete!
+echo ===============================================
+echo.
+pause
+exit /b 0
+
 REM ===============================================
 REM SUBROUTINE: BUILD_EXE
 REM ===============================================
@@ -135,6 +165,7 @@ echo - Cleaning old build files...
 if exist "dist" rmdir /s /q dist
 if exist "build" rmdir /s /q build
 if exist "ExcelProcessor.spec" del ExcelProcessor.spec
+if exist "__pycache__" rmdir /s /q __pycache__
 
 echo.
 echo - Creating executable...
@@ -228,6 +259,63 @@ echo.
 exit /b 0
 
 REM ===============================================
+REM SUBROUTINE: UPDATE_APP
+REM ===============================================
+:UPDATE_APP
+
+if not exist "dist\ExcelProcessor.exe" (
+    echo ❌ Error: dist\ExcelProcessor.exe not found
+    exit /b 1
+)
+
+set INSTALL_DIR=%ProgramFiles%\ExcelProcessor
+
+if not exist "%INSTALL_DIR%" (
+    echo ❌ Error: Excel Processor is not installed
+    echo Please use option 2 to install first
+    exit /b 1
+)
+
+echo - Checking for Administrator privileges...
+net session >nul 2>&1
+if %errorLevel% NEQ 0 (
+    echo.
+    echo ⚠️  This update requires Administrator privileges
+    echo Please run as Administrator
+    echo.
+    pause
+    exit /b 1
+)
+
+echo - Backing up old version...
+if exist "%INSTALL_DIR%\ExcelProcessor.exe.bak" del "%INSTALL_DIR%\ExcelProcessor.exe.bak"
+if exist "%INSTALL_DIR%\ExcelProcessor.exe" (
+    ren "%INSTALL_DIR%\ExcelProcessor.exe" "ExcelProcessor.exe.bak"
+)
+
+echo - Installing new version...
+copy "dist\ExcelProcessor.exe" "%INSTALL_DIR%\ExcelProcessor.exe" >nul 2>&1
+if exist "config.json" copy "config.json" "%INSTALL_DIR%\" >nul 2>&1
+
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Update failed - restoring backup...
+    if exist "%INSTALL_DIR%\ExcelProcessor.exe.bak" (
+        ren "%INSTALL_DIR%\ExcelProcessor.exe.bak" "ExcelProcessor.exe"
+    )
+    exit /b 1
+)
+
+echo - Cleaning up backup...
+if exist "%INSTALL_DIR%\ExcelProcessor.exe.bak" del "%INSTALL_DIR%\ExcelProcessor.exe.bak"
+
+echo.
+echo ✅ Update completed successfully!
+echo Application updated to: %INSTALL_DIR%
+echo.
+
+exit /b 0
+
+REM ===============================================
 REM SUBROUTINE: CREATE_SHORTCUT
 REM ===============================================
 :CREATE_SHORTCUT
@@ -300,4 +388,3 @@ exit /b 0
 REM ===============================================
 REM END OF SCRIPT
 REM ===============================================
-

@@ -383,6 +383,16 @@ def save_paths_config(paths: Dict) -> bool:
         return False
 
 
+@eel.expose
+def check_directory_exists(directory_path: str) -> bool:
+    """ตรวจสอบว่า directory มีอยู่และสามารถเข้าถึงได้"""
+    try:
+        return os.path.isdir(directory_path) and os.access(directory_path, os.R_OK)
+    except Exception as e:
+        logger.warning(f"Error checking directory {directory_path}: {e}")
+        return False
+
+
 # ==================== START DESKTOP APP ====================
 def start_app():
     """เปิด Desktop Application"""

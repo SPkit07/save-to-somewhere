@@ -159,7 +159,7 @@ function showWarningModal(preview) {
     if (preview.jk_has_zero) {
         msg.textContent = "ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH หรือข้อมูล J และ K ไม่ตรงกัน กรุณาตรวจสอบ:";
     } else {
-        msg.textContent = "พบข้อมูลในคอลัมน์ J และ K (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:";
+        msg.textContent = "พบข้อมูลในคอลัมน์ เบิก และ รับ (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:";
     }
     
     if (preview.jk_mismatch && preview.jk_mismatch.length > 0) {
@@ -239,23 +239,66 @@ function closePreviewModal() {
     currentPreviewData = null;
 }
 
+// ==================== VALIDATE PATHS & DIRECTORIES ====================
+async function validatePathsAndDirectories() {
+    const paths = getCurrentPathsConfig();
+    const errors = [];
+
+    // ตรวจสอบว่ามี path ไหม
+    if (!paths || Object.keys(paths).length === 0) {
+        return {
+            valid: false,
+            errors: ['❌ กรุณาระบุที่อยู่ปลายทาง (Path) ก่อนประมวลผลไฟล์']
+        };
+    }
+
+    // ตรวจสอบแต่ละ path ว่า directory มีอยู่ไหม
+    for (const [key, path] of Object.entries(paths)) {
+        try {
+            const exists = await eel.check_directory_exists(path)();
+            if (!exists) {
+                const branchLabel = key === 'SP' ? 'SP' : `K${key[0]}-${key[1]}`;
+                errors.push(`❌ ไม่พบโฟลเดอร์: ${path} (${branchLabel})`);
+            }
+        } catch (err) {
+            console.error(`Error checking directory ${path}:`, err);
+            errors.push(`❌ ไม่สามารถตรวจสอบ: ${path}`);
+        }
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors: errors
+    };
+}
+
 // ==================== CONFIRM PROCESS ====================
 async function confirmProcess() {
     if (!currentPreviewData) {
         showStatus('❌ ไม่มีข้อมูลไฟล์', 'error');
         return;
     }
-    
+
+    // ตรวจสอบ paths และ directories ก่อน
+    closePreviewModal();
+    showStatus('⏳ กำลังตรวจสอบที่อยู่ปลายทาง...', 'loading');
+
+    const validation = await validatePathsAndDirectories();
+    if (!validation.valid) {
+        const errorMsg = validation.errors.join('\n');
+        showStatus(errorMsg, 'error');
+        return;
+    }
+
     // เก็บข้อมูลไว้ก่อน เพราะ closePreviewModal จะ clear currentPreviewData
     const previewData = { ...currentPreviewData };
-    
-    closePreviewModal();
+
     showStatus('⏳ กำลังประมวลผลไฟล์...', 'loading');
-    
+
     try {
         const paths = getCurrentPathsConfig();
         const result = await eel.process_file_from_desktop(previewData.file_path, paths)();
-        
+
         if (result.success) {
             showStatus(`✅ ${result.message}`, 'success');
             if (result.detected_branch) {
@@ -315,7 +358,22 @@ function initializeBranchPaths() {
 // ==================== LOCALSTORAGE / BACKEND MANAGEMENT ====================
 async function savePathsToLocalStorage() {
     const paths = getCurrentPathsConfig();
-    
+
+    // Validation: ตรวจสอบว่าไม่มี PATH ว่างเปล่า
+    const emptyPaths = [];
+    document.querySelectorAll('.path-input').forEach(input => {
+        const key = input.getAttribute('data-key');
+        const label = input.previousElementSibling.textContent;
+        if (!input.value.trim()) {
+            emptyPaths.push(label);
+        }
+    });
+
+    if (emptyPaths.length > 0) {
+        showStatus(`❌ กรุณาใส่ PATH สำหรับ: ${emptyPaths.join(', ')}`, 'error');
+        return;
+    }
+
     if (DESKTOP_MODE) {
         try {
             const success = await eel.save_paths_config(paths)();
