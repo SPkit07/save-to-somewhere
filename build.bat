@@ -153,11 +153,11 @@ echo - Installing build dependencies...
 pip install eel pyinstaller --quiet
 
 echo.
-echo - Preparing web files...
-if exist "web" rmdir /s /q web
-mkdir web
-copy index.html web\ >nul 2>&1
-copy script.js web\ >nul 2>&1
+echo - Checking web files...
+if not exist "web" (
+    echo ❌ Error: web directory not found!
+    exit /b 1
+)
 echo ✅ UI files ready
 
 echo.

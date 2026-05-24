@@ -279,6 +279,9 @@ async function confirmProcess() {
         return;
     }
 
+    // เก็บข้อมูลไว้ก่อน เพราะ closePreviewModal จะ clear currentPreviewData
+    const previewData = { ...currentPreviewData };
+
     // ตรวจสอบ paths และ directories ก่อน
     closePreviewModal();
     showStatus('⏳ กำลังตรวจสอบที่อยู่ปลายทาง...', 'loading');
@@ -289,9 +292,6 @@ async function confirmProcess() {
         showStatus(errorMsg, 'error');
         return;
     }
-
-    // เก็บข้อมูลไว้ก่อน เพราะ closePreviewModal จะ clear currentPreviewData
-    const previewData = { ...currentPreviewData };
 
     showStatus('⏳ กำลังประมวลผลไฟล์...', 'loading');
 
