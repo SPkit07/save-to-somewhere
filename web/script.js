@@ -135,6 +135,8 @@ async function previewFile(filePath) {
         // ตรวจสอบ Warning: ข้อมูลไม่ตรงกัน หรือมีค่าเป็น 0
         if (preview.jk_has_zero || (preview.jk_mismatch && preview.jk_mismatch.length > 0)) {
             showWarningModal(preview);
+        } else if (preview.receive_mismatch && preview.receive_mismatch.length > 0) {
+            showReceiveWarningModal(preview);
         } else {
             // แสดง Preview Modal ทันที
             showPreviewModal(preview);
@@ -197,6 +199,53 @@ function closeWarningModal() {
 
 function continueToPreview() {
     const modal = document.getElementById('warningModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (currentPreviewData) {
+        if (currentPreviewData.receive_mismatch && currentPreviewData.receive_mismatch.length > 0) {
+            showReceiveWarningModal(currentPreviewData);
+        } else {
+            showPreviewModal(currentPreviewData);
+        }
+    }
+}
+
+// ==================== SHOW RECEIVE WARNING MODAL ====================
+function showReceiveWarningModal(preview) {
+    const modal = document.getElementById('receiveWarningModal');
+    if (!modal) return;
+    
+    const tbody = document.getElementById('receiveWarningTableBody');
+    tbody.innerHTML = '';
+    
+    if (preview.receive_mismatch && preview.receive_mismatch.length > 0) {
+        preview.receive_mismatch.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.row}</td>
+                <td>${item.sku_name}</td>
+                <td class="mismatch">${item.receive_piece}</td>
+                <td class="mismatch">${item.re_sku_code}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    modal.style.display = 'flex';
+    statusMessage.style.display = 'none';
+}
+
+function closeReceiveWarningModal() {
+    const modal = document.getElementById('receiveWarningModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentPreviewData = null; // ยกเลิกการทำรายการ
+}
+
+function continueFromReceiveToPreview() {
+    const modal = document.getElementById('receiveWarningModal');
     if (modal) {
         modal.style.display = 'none';
     }
@@ -436,7 +485,7 @@ function getCurrentPathsConfig() {
 
 // ==================== BRANCH DISPLAY ====================
 function updateBranchDisplay(branchCode) {
-    const branchName = BRANCH_NAMES[branchCode] || 'ไม่ทราบ';
+    const branchName = BRANCH_NAMES[branchCode] || 'SUPER';
     branchNameDisplay.textContent = branchName;
     branchCodeDisplay.textContent = `รหัสสาขา: ${branchCode}`;
 }

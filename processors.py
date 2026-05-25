@@ -76,6 +76,77 @@ def validate_excel_structure(df: pd.DataFrame) -> Tuple[bool, str]:
     logger.debug("Excel structure validation passed")
     return True, ""
 
+def validate_receive_piece(df: pd.DataFrame) -> Tuple[bool, list]:
+    """
+    ตรวจสอบข้อมูลคอลัมน์ RECEIVE_PIECE และ RE_SKU_CODE
+    เงื่อนไข:
+    1. ลบ 0 แทนด้วยค่าว่างในคอลัมน์ RECEIVE_PIECE
+    2. ถ้า RECEIVE_PIECE มีค่า > 0 แล้ว RE_SKU_CODE ต้องไม่เป็นค่าว่าง
+    
+    Args:
+        df: DataFrame
+    
+    Returns:
+        Tuple of (is_valid, error_details_list)
+    """
+    try:
+        if "RECEIVE_PIECE" not in df.columns or "RE_SKU_CODE" not in df.columns:
+            logger.info("RECEIVE_PIECE or RE_SKU_CODE column not found - skipping check")
+            return True, []
+            
+        # สร้าง copy เพื่อไม่ให้กระทบข้อมูลหลักหากต้องการแก้แค่ในฟังก์ชัน
+        temp_df = df.copy()
+        
+        # 1. ทำการลบ 0 แทนด้วยค่าว่างใน col RECEIVE_PIECE
+        # เปลี่ยน 0 (ตัวเลข) และ "0" (สตริง) เป็นค่าว่าง
+        temp_df["RECEIVE_PIECE"] = temp_df["RECEIVE_PIECE"].replace({0: "", "0": "", 0.0: ""})
+        
+        # 2. ดูที่ col "RECEIVE_PIECE" ที่มีค่า > 0
+        # แปลงเป็นตัวเลขเพื่อเช็คเงื่อนไข > 0 (ค่าที่เป็นค่าว่างจะกลายเป็น NaN)
+        receive_pieces = pd.to_numeric(temp_df["RECEIVE_PIECE"], errors='coerce')
+        condition_receive = receive_pieces > 0
+        
+        # 3. col "RE_SKU_CODE" ต้องห้ามเป็นค่าว่าง
+        # ตรวจสอบว่า RE_SKU_CODE เป็นค่าว่างหรือ NaN
+        condition_sku_empty = temp_df["RE_SKU_CODE"].isna() | (temp_df["RE_SKU_CODE"].astype(str).str.strip() == "")
+        
+        # กรองหาแถวที่ผิดเงื่อนไข
+        mismatched_df = temp_df[condition_receive & condition_sku_empty]
+        
+        if mismatched_df.empty:
+            logger.info("✅ All valid: No rows with RECEIVE_PIECE > 0 have empty RE_SKU_CODE")
+            return True, []
+            
+        logger.warning(f"⚠️ Found {len(mismatched_df)} rows with RECEIVE_PIECE > 0 but empty RE_SKU_CODE")
+        
+        # ค้นหาคอลัมน์ชื่อสินค้า
+        prod_name_col = None
+        for candidate in ["SKU_NAME", "GOODS_NAME", "PRODUCT_NAME", "ITEM_NAME", "ชื่อสินค้า"]:
+            if candidate in temp_df.columns:
+                prod_name_col = candidate
+                break
+        
+        if not prod_name_col and len(temp_df.columns) > 5:
+            prod_name_col = temp_df.columns[5] # Fallback
+            
+        error_details = []
+        for idx, row in mismatched_df.iterrows():
+            name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "-"
+            receive_val = str(row["RECEIVE_PIECE"]).strip()
+            
+            error_details.append({
+                "row": idx + 1, # บันทึกแถวจริง (ไม่นับจาก 0)
+                "sku_name": str(name).strip(),
+                "receive_piece": receive_val,
+                "re_sku_code": "ว่าง"
+            })
+            
+        return False, error_details
+        
+    except Exception as e:
+        logger.error(f"Error checking RECEIVE_PIECE and RE_SKU_CODE: {e}", exc_info=True)
+        return True, []
+
 # ==================== DATA CLEANING ====================
 def clean_excel_data(df: pd.DataFrame) -> pd.DataFrame:
     """

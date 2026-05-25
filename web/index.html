@@ -588,8 +588,8 @@
                             <tr>
                                 <th>รหัสสินค้า</th>
                                 <th>ชื่อสินค้า</th>
-                                <th>คอลัมน์ J</th>
-                                <th>คอลัมน์ K</th>
+                                <th>รายการเบิก</th>
+                                <th>รายการรับ</th>
                             </tr>
                         </thead>
                         <tbody id="warningTableBody">
@@ -602,6 +602,42 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeWarningModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="continueToPreview()" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RECEIVE PIECE WARNING MODAL ==================== -->
+    <div class="modal" id="receiveWarningModal">
+        <div class="modal-content" style="border-top: 5px solid #e67e22; max-width: 650px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">
+                <h2>⚠️ คำเตือน: ข้อมูล RECEIVE_PIECE ไม่สมบูรณ์</h2>
+                <button class="modal-close" onclick="closeReceiveWarningModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;">
+                    พบข้อมูล RECEIVE_PIECE > 0 แต่ RE_SKU_CODE เป็นค่าว่าง กรุณาตรวจสอบ:
+                </p>
+                <div class="warning-table-container">
+                    <table class="warning-table">
+                        <thead>
+                            <tr>
+                                <th>แถวที่</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>RECEIVE_PIECE</th>
+                                <th>RE_SKU_CODE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiveWarningTableBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeReceiveWarningModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="continueFromReceiveToPreview()" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>

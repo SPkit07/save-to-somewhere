@@ -29,7 +29,7 @@ except ImportError:
 try:
     from config import SERVER_HOST, CORS_ORIGINS, BRANCH_NAMES
     from logger import setup_logger
-    from processors import process_excel_file
+    from processors import process_excel_file, validate_receive_piece
 except ImportError as e:
     print(f"❌ Import error: {e}")
     print("Make sure config.py, logger.py, processors.py exist in the same directory")
@@ -94,6 +94,9 @@ def preview_excel_file(file_path: str) -> Dict:
         # 1. Clean Data like Save.ipynb
         if "RECEIVE_PIECE" in df.columns:
             df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
+            
+        # 1b. Validate RECEIVE_PIECE and RE_SKU_CODE
+        receive_valid, receive_mismatches = validate_receive_piece(df)
             
         # 2. Validation for 1=SP,2=WH mismatch (Column J vs K)
         jk_mismatch_details = []
@@ -204,7 +207,8 @@ def preview_excel_file(file_path: str) -> Dict:
             "wh_count": int(wh_count),
             "columns": columns[:5],
             "jk_mismatch": jk_mismatch_details,
-            "jk_has_zero": jk_has_zero
+            "jk_has_zero": jk_has_zero,
+            "receive_mismatch": receive_mismatches
         }
     
     except Exception as e:
