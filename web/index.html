@@ -11,20 +11,28 @@
             box-sizing: border-box;
         }
 
+        html {
+            height: 100%;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
+            min-height: 100dvh;
             padding: 20px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
-            max-width: 1400px;
+            width: min(100%, 1400px);
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            min-height: 90vh;
+            grid-template-columns: minmax(320px, 0.95fr) minmax(380px, 1.05fr);
+            gap: 20px;
+            flex: 1 1 auto;
+            min-height: 0;
         }
 
         /* ==================== LEFT SECTION ==================== */
@@ -32,6 +40,8 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            min-width: 0;
+            min-height: 0;
         }
 
         .branch-display {
@@ -176,7 +186,8 @@
             padding: 30px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             overflow-y: auto;
-            max-height: 90vh;
+            min-width: 0;
+            min-height: 0;
         }
 
         .right-section h2 {
@@ -200,6 +211,7 @@
             border-radius: 8px;
             padding: 18px;
             border-left: 5px solid #3498db;
+            min-width: 0;
         }
 
         .branch-group h3 {
@@ -229,6 +241,7 @@
 
         .path-input {
             width: 100%;
+            min-width: 0;
             padding: 12px 15px;
             border: 1px solid #bdc3c7;
             border-radius: 6px;
@@ -274,11 +287,37 @@
         @media (max-width: 1024px) {
             .container {
                 grid-template-columns: 1fr;
+                flex: 0 1 auto;
+                min-height: 0;
                 gap: 20px;
             }
 
             .right-section {
-                max-height: none;
+                overflow-y: visible;
+            }
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                gap: 12px;
+            }
+
+            .left-section {
+                gap: 12px;
+            }
+
+            .branch-display,
+            .right-section,
+            .branch-group {
+                padding: 16px;
+            }
+
+            .branch-name {
+                font-size: 32px;
             }
         }
 
@@ -498,6 +537,7 @@
             margin: 0 auto 20px auto;
             display: flex;
             gap: 15px;
+            flex-wrap: wrap;
         }
         .tab-button {
             background: #ffffff;
@@ -511,6 +551,8 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
             font-family: inherit;
+            flex: 1 1 260px;
+            min-width: 0;
         }
         .tab-button:hover {
             color: #2c3e50;
@@ -638,7 +680,7 @@
         /* ==================== SAVE PATH MINI GROUP (Tab 2) ==================== */
         .save-paths-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 12px;
         }
         .save-path-item {
@@ -658,9 +700,11 @@
         .save-path-item .sp-input-row {
             display: flex;
             gap: 6px;
+            min-width: 0;
         }
         .save-path-item .sp-input-row input {
             flex: 1;
+            min-width: 0;
             padding: 8px 10px;
             border: 1px solid #d5dbe0;
             border-radius: 6px;
@@ -688,6 +732,39 @@
         .save-path-item .sp-browse-btn:hover {
             transform: translateY(-1px);
             box-shadow: 0 3px 8px rgba(155,89,182,0.3);
+        }
+
+        @media (max-width: 700px) {
+            .tabs-container {
+                margin-bottom: 12px;
+            }
+
+            .tab-button {
+                flex-basis: 100%;
+                padding: 11px 14px;
+            }
+
+            .save-paths-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .path-input-group > div[style*="display: flex"],
+            .save-path-item .sp-input-row {
+                flex-direction: column;
+            }
+
+            .browse-btn,
+            .save-path-item .sp-browse-btn {
+                width: 100%;
+            }
+
+            .modal-footer,
+            .preview-item,
+            .preview-split {
+                display: block;
+            }
         }
     </style>
 </head>
@@ -766,6 +843,11 @@
             <div class="status-message" id="billStatusMessage" style="border-left-color: #9b59b6;">
                 <span class="status-icon" id="billStatusIcon">⏳</span>
                 <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
+            </div>
+
+            <div class="branch-group" id="billResultCard" style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7; max-height: 280px; overflow-y: auto;">
+                <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
+                <div id="billResultContent" style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
             </div>
         </div>
 
@@ -847,10 +929,6 @@
                 <!-- ปุ่มบันทึกการตั้งค่าทั้งหมดสำหรับหน้าที่สอง -->
                 <button class="save-btn" id="saveBillPathsBtn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾 บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
 
-                <div class="branch-group" id="billResultCard" style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7;">
-                    <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
-                    <div id="billResultContent" style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
-                </div>
             </div>
         </div>
     </div>
