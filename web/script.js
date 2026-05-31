@@ -32,10 +32,15 @@ const statusIcon = document.getElementById('statusIcon');
 const statusText = document.getElementById('statusText');
 
 // ==================== INITIALIZE ====================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initializeBranchPaths();
-    loadPathsFromLocalStorage();
+    await loadPathsFromLocalStorage();
     setupEventListeners();
+    
+    // Page 2 (Bill Processor) Initializations
+    await loadBillFormFromBackend();
+    setupBillFormEventListeners();
+    fetchBillSuggestions();
 });
 
 // ==================== EVENT LISTENERS ====================
@@ -50,6 +55,52 @@ function setupEventListeners() {
 
     // Save Button
     saveBtn.addEventListener('click', savePathsToLocalStorage);
+}
+
+function setupBillFormEventListeners() {
+    // Inputs changes for saving & updating autocomplete suggestions
+    const kmartSelect = document.getElementById('kmartSelect');
+    const partAInput = document.getElementById('partAInput');
+    const partBInput = document.getElementById('partBInput');
+
+    [kmartSelect, partAInput, partBInput].forEach(elem => {
+        elem.addEventListener('change', () => {
+            saveBillFormToLocalStorage();
+            fetchBillSuggestions();
+        });
+    });
+
+    // Bill autocomplete (Google-style)
+    setupBillAutocomplete();
+
+    // Browse Buttons for search paths
+    document.getElementById('browsePartABtn').addEventListener('click', handleBrowsePartAClick);
+    document.getElementById('browsePartBBtn').addEventListener('click', handleBrowsePartBClick);
+
+    // Browse Buttons for per-branch save paths (dynamic binding via data attribute)
+    document.querySelectorAll('.sp-browse-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-save-target');
+            if (targetId) handleBrowseSavePathClick(targetId);
+        });
+    });
+
+    // Save path input change -> persist to localStorage
+    SAVE_PATH_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', saveBillFormToLocalStorage);
+        }
+    });
+
+    // Save Settings Button for Page 2
+    const saveBillPathsBtn = document.getElementById('saveBillPathsBtn');
+    if (saveBillPathsBtn) {
+        saveBillPathsBtn.addEventListener('click', saveBillPathsToBackend);
+    }
+
+    // Run Button
+    document.getElementById('runBillBtn').addEventListener('click', runBillProcessor);
 }
 
 function handleDragOver(e) {
@@ -406,13 +457,32 @@ function initializeBranchPaths() {
 
 // ==================== LOCALSTORAGE / BACKEND MANAGEMENT ====================
 async function savePathsToLocalStorage() {
-    const paths = getCurrentPathsConfig();
+    // Read existing backend config
+    let existingPaths = {};
+    if (DESKTOP_MODE) {
+        try {
+            existingPaths = await eel.load_paths_config()();
+        } catch (error) {
+            console.error('Error loading existing config:', error);
+        }
+    } else {
+        const saved = localStorage.getItem('pathsConfig');
+        if (saved) {
+            try {
+                existingPaths = JSON.parse(saved);
+            } catch (e) {}
+        }
+    }
 
-    // Validation: ตรวจสอบว่าไม่มี PATH ว่างเปล่า
+    const page1Paths = getCurrentPathsConfig();
+    const mergedPaths = { ...existingPaths, ...page1Paths };
+
+    // Validation: ตรวจสอบว่าไม่มี PATH ว่างเปล่าสำหรับ Page 1
     const emptyPaths = [];
     document.querySelectorAll('.path-input').forEach(input => {
         const key = input.getAttribute('data-key');
-        const label = input.previousElementSibling.textContent;
+        if (!key) return; // Only validate Page 1 paths
+        const label = input.previousElementSibling ? input.previousElementSibling.textContent : key;
         if (!input.value.trim()) {
             emptyPaths.push(label);
         }
@@ -425,7 +495,7 @@ async function savePathsToLocalStorage() {
 
     if (DESKTOP_MODE) {
         try {
-            const success = await eel.save_paths_config(paths)();
+            const success = await eel.save_paths_config(mergedPaths)();
             if (success) {
                 showStatus('✅ บันทึกการตั้งค่า Path สำเร็จแล้ว!', 'success');
             } else {
@@ -436,7 +506,7 @@ async function savePathsToLocalStorage() {
             showStatus('❌ ไม่สามารถเชื่อมต่อกับระบบหลักได้', 'error');
         }
     } else {
-        localStorage.setItem('pathsConfig', JSON.stringify(paths));
+        localStorage.setItem('pathsConfig', JSON.stringify(mergedPaths));
         showStatus('✅ บันทึกการตั้งค่า Path สำเร็จแล้ว!', 'success');
     }
 }
@@ -509,5 +579,461 @@ function showStatus(message, type = 'loading') {
         setTimeout(() => {
             statusMessage.style.display = 'none';
         }, 5000);
+    }
+}
+
+
+// ==================== PAGE 2 (BILL PROCESSOR) LOGIC ====================
+
+// --- Autocomplete state ---
+let allBillSuggestions = [];  // Full list fetched from backend
+let acHighlightIndex = -1;   // Currently highlighted item in dropdown
+let isFetchingSuggestions = false;  // Loading state
+
+function switchTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active-tab');
+    });
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active-tab');
+    }
+    
+    // Set active button
+    let activeBtn;
+    if (tabName === 'processor') {
+        activeBtn = document.getElementById('tabBtnProcessor');
+    } else {
+        activeBtn = document.getElementById('tabBtnBillProcessor');
+    }
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+// ==================== GOOGLE-STYLE AUTOCOMPLETE ====================
+
+async function fetchBillSuggestions() {
+    const kmart = document.getElementById('kmartSelect').value;
+    const partA = document.getElementById('partAInput').value.trim();
+    const partB = document.getElementById('partBInput').value.trim();
+    
+    if (!kmart || (!partA && !partB)) {
+        allBillSuggestions = [];
+        return;
+    }
+    
+    isFetchingSuggestions = true;
+    
+    // Render immediately to show loading spinner
+    renderBillDropdown();
+    
+    try {
+        allBillSuggestions = await eel.get_bill_suggestions(kmart, partA, partB)();
+    } catch (err) {
+        console.error("Error fetching bill suggestions:", err);
+        allBillSuggestions = [];
+    } finally {
+        isFetchingSuggestions = false;
+        // Render again with fetched suggestions
+        renderBillDropdown();
+    }
+}
+
+function renderBillDropdown() {
+    const dropdown = document.getElementById('billDropdown');
+    const query = document.getElementById('billInput').value.trim().toLowerCase();
+    
+    if (isFetchingSuggestions) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">⏳ กำลังโหลดรายการบิล...</div>';
+        dropdown.classList.add('show');
+        return;
+    }
+    
+    if (!query) {
+        // Show all suggestions when focused but empty (like Google shows popular)
+        if (allBillSuggestions.length > 0) {
+            let html = '';
+            allBillSuggestions.forEach((sug, i) => {
+                html += `<div class="autocomplete-item${i === acHighlightIndex ? ' highlighted' : ''}" data-index="${i}" data-value="${sug}">
+                    <span class="ac-icon">📄</span>
+                    <span class="ac-text">${sug}</span>
+                </div>`;
+            });
+            dropdown.innerHTML = html;
+            dropdown.classList.add('show');
+        } else {
+            dropdown.innerHTML = '<div class="autocomplete-empty">ยังไม่มีข้อมูลบิล — ตั้งค่า part_a / part_b ก่อน</div>';
+            dropdown.classList.add('show');
+        }
+        return;
+    }
+    
+    // Filter suggestions that contain the query
+    const filtered = allBillSuggestions.filter(s => s.toLowerCase().includes(query));
+    
+    if (filtered.length === 0) {
+        dropdown.innerHTML = `<div class="autocomplete-empty">ไม่พบ "${query}" — กด Enter เพื่อใช้ค่านี้</div>`;
+        dropdown.classList.add('show');
+        acHighlightIndex = -1;
+        return;
+    }
+    
+    // Clamp highlight index
+    if (acHighlightIndex >= filtered.length) acHighlightIndex = filtered.length - 1;
+    
+    let html = '';
+    filtered.forEach((sug, i) => {
+        // Highlight the matching portion
+        const matchStart = sug.toLowerCase().indexOf(query);
+        let displayText;
+        if (matchStart >= 0) {
+            const before = sug.substring(0, matchStart);
+            const match = sug.substring(matchStart, matchStart + query.length);
+            const after = sug.substring(matchStart + query.length);
+            displayText = `${before}<mark>${match}</mark>${after}`;
+        } else {
+            displayText = sug;
+        }
+        
+        html += `<div class="autocomplete-item${i === acHighlightIndex ? ' highlighted' : ''}" data-index="${i}" data-value="${sug}">
+            <span class="ac-icon">🔍</span>
+            <span class="ac-text">${displayText}</span>
+        </div>`;
+    });
+    
+    dropdown.innerHTML = html;
+    dropdown.classList.add('show');
+}
+
+function closeBillDropdown() {
+    const dropdown = document.getElementById('billDropdown');
+    dropdown.classList.remove('show');
+    acHighlightIndex = -1;
+}
+
+function setupBillAutocomplete() {
+    const input = document.getElementById('billInput');
+    const dropdown = document.getElementById('billDropdown');
+    
+    // Debounced input handler
+    let debounceTimer;
+    input.addEventListener('input', () => {
+        acHighlightIndex = -1;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            renderBillDropdown();
+        }, 80);
+    });
+    
+    // Show dropdown on focus and proactively fetch suggestions
+    input.addEventListener('focus', async () => {
+        renderBillDropdown();
+        await fetchBillSuggestions();
+    });
+    
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+        if (!dropdown.classList.contains('show') || items.length === 0) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveBillFormToLocalStorage();
+            }
+            return;
+        }
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            acHighlightIndex = Math.min(acHighlightIndex + 1, items.length - 1);
+            renderBillDropdown();
+            // Scroll into view
+            const highlighted = dropdown.querySelector('.highlighted');
+            if (highlighted) highlighted.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            acHighlightIndex = Math.max(acHighlightIndex - 1, 0);
+            renderBillDropdown();
+            const highlighted = dropdown.querySelector('.highlighted');
+            if (highlighted) highlighted.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (acHighlightIndex >= 0 && acHighlightIndex < items.length) {
+                input.value = items[acHighlightIndex].getAttribute('data-value');
+            }
+            closeBillDropdown();
+            saveBillFormToLocalStorage();
+        } else if (e.key === 'Escape') {
+            closeBillDropdown();
+        }
+    });
+    
+    // Click on dropdown item
+    dropdown.addEventListener('mousedown', (e) => {
+        // mousedown instead of click to fire before blur
+        const item = e.target.closest('.autocomplete-item');
+        if (item) {
+            input.value = item.getAttribute('data-value');
+            closeBillDropdown();
+            saveBillFormToLocalStorage();
+        }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            closeBillDropdown();
+        }
+    });
+}
+
+// ==================== SAVE/LOAD FORM ====================
+
+const SAVE_PATH_IDS = ['savePathK1', 'savePathK2', 'savePathK3', 'savePathK4', 'savePathK5', 'savePathSP'];
+const KMART_SAVE_KEY_MAP = {
+    'K1': 'savePathK1',
+    'K2': 'savePathK2',
+    'K3': 'savePathK3',
+    'K4': 'savePathK4',
+    'K5': 'savePathK5',
+    'SP': 'savePathSP',
+};
+
+function saveBillFormToLocalStorage() {
+    const kmart = document.getElementById('kmartSelect').value;
+    const bill = document.getElementById('billInput').value.trim();
+    const partA = document.getElementById('partAInput').value.trim();
+    const partB = document.getElementById('partBInput').value.trim();
+    
+    // Collect all save paths
+    const savePaths = {};
+    SAVE_PATH_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) savePaths[id] = el.value.trim();
+    });
+    
+    const config = { kmart, bill, partA, partB, savePaths };
+    localStorage.setItem('billProcessorConfig', JSON.stringify(config));
+}
+
+async function saveBillPathsToBackend() {
+    const partA = document.getElementById('partAInput').value.trim();
+    const partB = document.getElementById('partBInput').value.trim();
+    
+    // Collect all save paths
+    const savePaths = {};
+    SAVE_PATH_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) savePaths[id] = el.value.trim();
+    });
+    
+    // Validate that at least one search folder is set
+    if (!partA && !partB) {
+        showBillStatus('❌ กรุณาระบุโฟลเดอร์ part_a หรือ part_b อย่างน้อยหนึ่งแห่ง', 'error');
+        return;
+    }
+    
+    // Save to localStorage (original behavior)
+    saveBillFormToLocalStorage();
+    
+    // Save to Backend Config
+    let existingConfig = {};
+    if (DESKTOP_MODE) {
+        try {
+            existingConfig = await eel.load_paths_config()();
+        } catch (error) {
+            console.error('Error loading existing config:', error);
+        }
+    }
+    
+    // Merge Page 2 settings
+    const page2Settings = {
+        partA: partA,
+        partB: partB,
+        ...savePaths
+    };
+    
+    const mergedConfig = { ...existingConfig, ...page2Settings };
+    
+    if (DESKTOP_MODE) {
+        try {
+            const success = await eel.save_paths_config(mergedConfig)();
+            if (success) {
+                showBillStatus('✅ บันทึกการตั้งค่าเส้นทางทั้งหมดสำเร็จแล้ว!', 'success');
+            } else {
+                showBillStatus('❌ ไม่สามารถบันทึกการตั้งค่าเส้นทางได้', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving Page 2 config to backend:', error);
+            showBillStatus('❌ เกิดข้อผิดพลาดขณะเชื่อมต่อกับระบบหลัก', 'error');
+        }
+    } else {
+        showBillStatus('✅ บันทึกการตั้งค่าเส้นทาง (Local) สำเร็จแล้ว!', 'success');
+    }
+}
+
+async function loadBillFormFromBackend() {
+    let paths = {};
+    if (DESKTOP_MODE) {
+        try {
+            paths = await eel.load_paths_config()();
+        } catch (error) {
+            console.error('Error loading config from backend:', error);
+        }
+    }
+    
+    // Also try localStorage as fallback or merge
+    let localConfig = {};
+    const saved = localStorage.getItem('billProcessorConfig');
+    if (saved) {
+        try {
+            localConfig = JSON.parse(saved);
+        } catch (e) {
+            console.error("Error parsing bill form config:", e);
+        }
+    }
+    
+    // Load inputs
+    const kmart = localConfig.kmart || 'K1';
+    const bill = localConfig.bill || '';
+    const partA = paths.partA || localConfig.partA || "G:\\My Drive\\KMART(ใช้งาน)";
+    const partB = paths.partB || localConfig.partB || "G:\\My Drive\\SP";
+    
+    document.getElementById('kmartSelect').value = kmart;
+    document.getElementById('billInput').value = bill;
+    document.getElementById('partAInput').value = partA;
+    document.getElementById('partBInput').value = partB;
+    
+    // Load save paths
+    SAVE_PATH_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = paths[id] || (localConfig.savePaths && localConfig.savePaths[id]) || '';
+        }
+    });
+    
+    // Migration: if old config has destPath but no savePaths, migrate
+    if (localConfig.destPath && (!localConfig.savePaths && !paths.savePathK1)) {
+        SAVE_PATH_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !el.value) el.value = localConfig.destPath;
+        });
+    }
+    
+    // If SP path is empty, set default
+    const spEl = document.getElementById('savePathSP');
+    if (spEl && !spEl.value) {
+        spEl.value = "C:\\Users\\KS\\Desktop";
+    }
+}
+
+// ==================== BROWSE BUTTONS ====================
+
+async function handleBrowsePartAClick() {
+    const path = await eel.select_directory_dialog()();
+    if (path) {
+        document.getElementById('partAInput').value = path;
+        saveBillFormToLocalStorage();
+        fetchBillSuggestions();
+    }
+}
+
+async function handleBrowsePartBClick() {
+    const path = await eel.select_directory_dialog()();
+    if (path) {
+        document.getElementById('partBInput').value = path;
+        saveBillFormToLocalStorage();
+        fetchBillSuggestions();
+    }
+}
+
+async function handleBrowseSavePathClick(targetId) {
+    const path = await eel.select_directory_dialog()();
+    if (path) {
+        document.getElementById(targetId).value = path;
+        saveBillFormToLocalStorage();
+    }
+}
+
+// ==================== RUN BILL PROCESSOR ====================
+
+async function runBillProcessor() {
+    const kmart = document.getElementById('kmartSelect').value;
+    const bill = document.getElementById('billInput').value.trim();
+    const partA = document.getElementById('partAInput').value.trim();
+    const partB = document.getElementById('partBInput').value.trim();
+    
+    // Get save path for the selected branch
+    const savePathId = KMART_SAVE_KEY_MAP[kmart];
+    const destPath = savePathId ? document.getElementById(savePathId).value.trim() : '';
+    
+    if (!bill) {
+        showBillStatus('❌ กรุณาระบุเดือน-ท้ายบิล (เช่น 05 หรือ 05-1)', 'error');
+        return;
+    }
+    if (!destPath) {
+        showBillStatus(`❌ กรุณาระบุ PATH ปลายทางเซฟไฟล์สำหรับสาขา ${kmart}`, 'error');
+        return;
+    }
+    if (!partA && !partB) {
+        showBillStatus('❌ กรุณาระบุโฟลเดอร์ part_a หรือ part_b อย่างน้อยหนึ่งแห่ง', 'error');
+        return;
+    }
+    
+    saveBillFormToLocalStorage();
+    
+    showBillStatus('⏳ กำลังประมวลผลไฟล์บิลย้อนหลัง...', 'loading');
+    document.getElementById('billResultCard').style.display = 'none';
+    
+    try {
+        const result = await eel.process_pass_2_save(kmart, bill, destPath, partA, partB)();
+        
+        if (result.success) {
+            showBillStatus(`✅ ${result.message}`, 'success');
+            
+            const resultCard = document.getElementById('billResultCard');
+            const resultContent = document.getElementById('billResultContent');
+            
+            resultContent.textContent = `🎉 ประมวลผลสำเร็จ!
+📄 ชื่อไฟล์สาขา: ${kmart}-${bill}
+📊 จำนวนข้อมูลแถวทั้งหมด: ${result.row_count} บรรทัด
+💾 เซฟตำแหน่งไฟล์: ${result.save_path}`;
+            
+            resultCard.style.display = 'block';
+        } else {
+            showBillStatus(`❌ ${result.message}`, 'error');
+        }
+    } catch (err) {
+        console.error("Processing bill error:", err);
+        showBillStatus(`❌ เกิดข้อผิดพลาด: ${err.message}`, 'error');
+    }
+}
+
+function showBillStatus(message, type = 'loading') {
+    const msgEl = document.getElementById('billStatusMessage');
+    const textEl = document.getElementById('billStatusText');
+    const iconEl = document.getElementById('billStatusIcon');
+    
+    msgEl.className = `status-message ${type}`;
+    textEl.textContent = message;
+    
+    const icons = {
+        'loading': '⏳',
+        'success': '✅',
+        'error': '❌'
+    };
+    iconEl.textContent = icons[type] || '⏳';
+    msgEl.style.display = 'flex';
+    
+    if (type !== 'loading') {
+        setTimeout(() => {
+            msgEl.style.display = 'none';
+        }, 7000);
     }
 }

@@ -397,6 +397,179 @@ def check_directory_exists(directory_path: str) -> bool:
         return False
 
 
+@eel.expose
+def get_bill_suggestions(kmart: str, part_a: str, part_b: str) -> list:
+    """
+    แสกนหาชื่อไฟล์ใน part_a และ part_b ตามรูปแบบ <kmart>-*.XLSX / <kmart>-*.xlsx (case-insensitive)
+    และคืนค่ารายชื่อ * (bill) ทั้งหมดที่เป็นไปได้
+    """
+    import glob
+    import os
+    
+    logger.info(f"🔍 Scanning bill suggestions for kmart={kmart}, part_a={part_a}, part_b={part_b}")
+    suggestions = set()
+    
+    dirs_to_search = []
+    if part_a and os.path.isdir(part_a):
+        dirs_to_search.append(part_a)
+    if part_b and os.path.isdir(part_b):
+        dirs_to_search.append(part_b)
+        
+    for d in dirs_to_search:
+        try:
+            # ค้นหาแบบ recursive ครอบคลุมโฟลเดอร์ลึกทุกระดับเช่นเดียวกับตอนเซฟไฟล์
+            search_patterns = [
+                os.path.join(d, "**", f"{kmart}-*.XLSX"),
+                os.path.join(d, "**", f"{kmart}-*.xlsx"),
+            ]
+            for pattern in search_patterns:
+                logger.info(f"Scanning pattern: {pattern}")
+                matched_files = glob.glob(pattern, recursive=True)
+                logger.info(f"Found {len(matched_files)} files matching {pattern}")
+                for file_path in matched_files:
+                    filename = os.path.basename(file_path)
+                    base, ext = os.path.splitext(filename)
+                    if '-' in base:
+                        parts = base.split('-', 1)
+                        if len(parts) > 1:
+                            suggestions.add(parts[1])
+        except Exception as e:
+            logger.warning(f"Error scanning directory {d} for suggestions: {e}")
+            
+    result = sorted(list(suggestions))
+    logger.info(f"✅ Scanning complete. Found {len(result)} unique suggestions: {result}")
+    return result
+
+
+@eel.expose
+def process_pass_2_save(kmart: str, bill: str, path_dest: str, part_a: str, part_b: str) -> dict:
+    """
+    ประมวลผลตามตรรกะในไฟล์ pass 2 save.ipynb
+    - รับสาขา Kmart, เดือน/ท้ายบิล, ปลายทางเซฟไฟล์, และ Google Drive PATHs (part_a, part_b)
+    - ค้นหาไฟล์ f"{Kmart}-{bill}.XLSX" หรือ xlsx
+    - ตรวจสอบรหัสสาขาให้ถูกต้อง
+    - แปลงข้อมูล ตัดช่องว่าง จัดชิดซ้าย บันทึกเป็น .txt
+    """
+    import os
+    import glob
+    import pandas as pd
+    
+    KMART_CODES = {
+        "K1": "11",
+        "K2": "21",
+        "K3": "31",
+        "K4": "41",
+        "K5": "51",
+        "SP": "00"
+    }
+    
+    kmart = kmart.upper().strip()
+    bill = bill.strip()
+    
+    if kmart not in KMART_CODES:
+        return {
+            "success": False,
+            "message": f"ไม่พบข้อมูลสาขา {kmart} ในระบบ"
+        }
+        
+    if not os.path.isdir(path_dest):
+        return {
+            "success": False,
+            "message": f"ไม่พบโฟลเดอร์ปลายทางที่ระบุ: {path_dest}"
+        }
+        
+    # ค้นหาไฟล์จาก part_a และ part_b
+    search_a_xlsx = os.path.join(part_a, "**", f"{kmart}-{bill}.XLSX")
+    search_a_lc = os.path.join(part_a, "**", f"{kmart}-{bill}.xlsx")
+    search_b_xlsx = os.path.join(part_b, "**", f"{kmart}-{bill}.XLSX")
+    search_b_lc = os.path.join(part_b, "**", f"{kmart}-{bill}.xlsx")
+    
+    file_list = []
+    
+    # ดำเนินการค้นหาในโฟลเดอร์ที่มีอยู่
+    if os.path.isdir(part_a):
+        file_list.extend(glob.glob(search_a_xlsx, recursive=True))
+        file_list.extend(glob.glob(search_a_lc, recursive=True))
+    if os.path.isdir(part_b):
+        file_list.extend(glob.glob(search_b_xlsx, recursive=True))
+        file_list.extend(glob.glob(search_b_lc, recursive=True))
+        
+    # เอาเฉพาะไฟล์ที่มีอยู่จริงและไม่มีโฟลเดอร์ปลอม
+    file_list = [f for f in file_list if os.path.isfile(f)]
+    
+    if not file_list:
+        return {
+            "success": False,
+            "message": f"❌ ไม่พบไฟล์ {kmart}-{bill}.XLSX ในโฟลเดอร์ part_a หรือ part_b (ตรวจสอบชื่อไฟล์หรือเส้นทางโฟลเดอร์)"
+        }
+        
+    target_file = file_list[0]
+    logger.info(f"Pass 2 processing using file: {target_file}")
+    
+    try:
+        # อ่าน Excel คอลัมน์แรก ตั้งชื่อ 'forBplus'
+        df = pd.read_excel(target_file, engine='openpyxl', usecols='A', names=['forBplus'])
+        
+        if df.empty:
+            return {
+                "success": False,
+                "message": "ไฟล์ Excel ว่างเปล่า ไม่มีข้อมูลในคอลัมน์ A"
+            }
+            
+        # ตรวจสอบรหัสสาขาในแถวแรก
+        first_row_val = str(df['forBplus'].iloc[0])
+        parts = first_row_val.split(',')
+        if len(parts) < 2:
+            return {
+                "success": False,
+                "message": f"รูปแบบข้อมูลแถวแรกไม่ถูกต้อง: {first_row_val} (ไม่มีเครื่องหมายจุลภาค)"
+            }
+            
+        file_branch_code = parts[1].strip()
+        expected_code = KMART_CODES[kmart]
+        
+        if file_branch_code != expected_code:
+            return {
+                "success": False,
+                "message": f"❌ รหัสสาขาไม่ตรงกัน! รหัสสาขาในไฟล์คือ '{file_branch_code}' แต่ต้องการรหัสของ {kmart} คือ '{expected_code}'"
+            }
+            
+        # เซฟไฟล์ปลายทาง
+        save_path = os.path.join(path_dest, f"{kmart}-{bill}.txt")
+        original_dest = path_dest
+        
+        # ตรวจสอบไฟล์ซ้ำ ถ้ามี ให้เปลี่ยนชื่อแล้วเซฟลง path_dest เหมือนเดิม
+        # (part_a / part_b ใช้แค่ค้นหาไฟล์ Excel เท่านั้น ไม่ใช้เซฟ)
+        is_duplicate = False
+        if os.path.exists(save_path):
+            is_duplicate = True
+            txt_filename = f"{kmart}-{bill}-1.txt"
+            save_path = os.path.join(path_dest, txt_filename)
+                
+        # แปลงเป็นสตริง, ลบช่องว่างหน้า-หลังแต่ละบรรทัด, และบันทึก
+        raw_text = df.to_string(index=False, header=False)
+        cleaned_lines = [line.strip() for line in raw_text.split('\n')]
+        cleaned_text = '\n'.join(cleaned_lines)
+        
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(cleaned_text)
+            
+        duplicate_note = " (⚠️ ตรวจพบไฟล์ซ้ำ เปลี่ยนชื่อเป็น -1)" if is_duplicate else ""
+        return {
+            "success": True,
+            "message": f"ส่งไฟล์ {kmart} สำเร็จ! ตำแหน่งไฟล์: {save_path}{duplicate_note}",
+            "row_count": len(df),
+            "save_path": save_path
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in process_pass_2_save: {e}", exc_info=True)
+        return {
+            "success": False,
+            "message": f"เกิดข้อผิดพลาดขณะประมวลผลไฟล์: {str(e)}"
+        }
+
+
 # ==================== START DESKTOP APP ====================
 def start_app():
     """เปิด Desktop Application"""

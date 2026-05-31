@@ -491,10 +491,215 @@
             color: #e74c3c;
             font-weight: bold;
         }
+
+        /* ==================== TABS SWITCHER STYLE ==================== */
+        .tabs-container {
+            max-width: 1400px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            gap: 15px;
+        }
+        .tab-button {
+            background: #ffffff;
+            color: #7f8c8d;
+            border: 1px solid #e2e8f0;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            font-family: inherit;
+        }
+        .tab-button:hover {
+            color: #2c3e50;
+            background: #f8fafb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        .tab-button.active {
+            color: white;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-color: #3498db;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        .tab-button.active.bill-tab-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            border-color: #9b59b6;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+        }
+        .tab-content {
+            display: none !important;
+        }
+        .tab-content.active-tab {
+            display: grid !important;
+        }
+
+        /* ==================== GOOGLE-STYLE AUTOCOMPLETE ==================== */
+        .autocomplete-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .autocomplete-wrapper input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background-color: #f8fafb;
+        }
+        .autocomplete-wrapper input:focus {
+            outline: none;
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.15);
+            background-color: #fff;
+        }
+        .autocomplete-wrapper .search-icon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #9b59b6;
+            pointer-events: none;
+        }
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .autocomplete-dropdown.show {
+            display: block;
+            animation: dropdownSlide 0.2s ease;
+        }
+        @keyframes dropdownSlide {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .autocomplete-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+        .autocomplete-item:first-child {
+            border-radius: 12px 12px 0 0;
+        }
+        .autocomplete-item:last-child {
+            border-radius: 0 0 12px 12px;
+        }
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background: linear-gradient(90deg, #f3e8ff 0%, #f8fafb 100%);
+        }
+        .autocomplete-item .ac-icon {
+            font-size: 14px;
+            color: #9b59b6;
+            flex-shrink: 0;
+        }
+        .autocomplete-item .ac-text {
+            flex: 1;
+        }
+        .autocomplete-item .ac-text mark {
+            background: transparent;
+            color: #9b59b6;
+            font-weight: 700;
+        }
+        .autocomplete-empty {
+            padding: 14px 16px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 13px;
+        }
+        .autocomplete-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+        .autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: #d5d5d5;
+            border-radius: 3px;
+        }
+
+        /* ==================== SAVE PATH MINI GROUP (Tab 2) ==================== */
+        .save-paths-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .save-path-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+        }
+        .save-path-item .sp-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .save-path-item .sp-input-row {
+            display: flex;
+            gap: 6px;
+        }
+        .save-path-item .sp-input-row input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #d5dbe0;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.2s;
+        }
+        .save-path-item .sp-input-row input:focus {
+            outline: none;
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 2px rgba(155,89,182,0.1);
+        }
+        .save-path-item .sp-browse-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .save-path-item .sp-browse-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(155,89,182,0.3);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Navigation Tabs -->
+    <div class="tabs-container">
+        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก (ประมวลผลสาขา)</button>
+        <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์บิลย้อนหลัง (หน้าที่สอง)</button>
+    </div>
+
+    <!-- Tab 1: Original Excel Processor -->
+    <div id="tab-processor" class="tab-content container active-tab">
         <!-- ==================== LEFT SECTION ==================== -->
         <div class="left-section">
             <div class="branch-display">
@@ -524,6 +729,129 @@
             <h2>⚙️ ตั้งค่า Path ปลายทาง</h2>
             <div class="branch-paths" id="branchPaths"></div>
             <button class="save-btn" id="saveBtn">💾 บันทึกการตั้งค่า</button>
+        </div>
+    </div>
+
+    <!-- Tab 2: Bill Processor (Second Page) -->
+    <div id="tab-bill-processor" class="tab-content container">
+        <!-- LEFT SECTION: Inputs and Run -->
+        <div class="left-section">
+            <div class="branch-display" style="border-left-color: #9b59b6; text-align: left;">
+                <h2 style="color: #9b59b6; font-size: 16px; margin-bottom: 15px; text-transform: uppercase;">🏢 เลือกข้อมูลบิลย้อนหลัง</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label class="path-label" style="margin-bottom: 8px;">🏬 เลือกสาขา (Kmart)</label>
+                    <select id="kmartSelect" class="path-input" style="font-family: inherit; font-size: 14px; font-weight: 500; height: auto;">
+                        <option value="K1">K1 (สาขา 11)</option>
+                        <option value="K2">K2 (สาขา 21)</option>
+                        <option value="K3">K3 (สาขา 31)</option>
+                        <option value="K4">K4 (สาขา 41)</option>
+                        <option value="K5">K5 (สาขา 51)</option>
+                        <option value="SP">SP (คลังสินค้า 00)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label class="path-label" style="margin-bottom: 8px;">🔍 ค้นหาบิล (เดือน - ท้ายบิล)</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3" autocomplete="off">
+                        <span class="search-icon">🔍</span>
+                        <div class="autocomplete-dropdown" id="billDropdown"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="save-btn" id="runBillBtn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 0; display: block;">🚀 เริ่มประมวลผลบิล</button>
+
+            <div class="status-message" id="billStatusMessage" style="border-left-color: #9b59b6;">
+                <span class="status-icon" id="billStatusIcon">⏳</span>
+                <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
+            </div>
+        </div>
+
+        <!-- RIGHT SECTION: Directory Settings & Logs -->
+        <div class="right-section">
+            <h2>⚙️ ตั้งค่าโฟลเดอร์ & เส้นทางประมวลผล</h2>
+            
+            <div class="branch-paths">
+                <!-- Search Paths (part_a, part_b) -->
+                <div class="branch-group" style="border-left-color: #3498db;">
+                    <h3>🔎 โฟลเดอร์ค้นหาไฟล์ Excel</h3>
+                    
+                    <div class="path-input-group">
+                        <label class="path-label">📂 part_a (Google Drive KMART ใช้งาน)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="partAInput" class="path-input" placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
+                            <button class="browse-btn" id="browsePartABtn" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                        </div>
+                    </div>
+
+                    <div class="path-input-group">
+                        <label class="path-label">📂 part_b (Google Drive SP)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="partBInput" class="path-input" placeholder="เลือกโฟลเดอร์ SP">
+                            <button class="browse-btn" id="browsePartBBtn" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Paths per branch -->
+                <div class="branch-group" style="border-left-color: #9b59b6;">
+                    <h3>💾 โฟลเดอร์ปลายทางเซฟไฟล์ .txt (แยกตามสาขา)</h3>
+                    <div class="save-paths-grid">
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K1 (สาขา 11)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK1" placeholder="C:\Users\...\K mart 1\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK1">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K2 (สาขา 21)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK2" placeholder="C:\Users\...\K mart 2\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK2">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K3 (สาขา 31)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK3" placeholder="C:\Users\...\K mart 3\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK3">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K4 (สาขา 41)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK4" placeholder="C:\Users\...\K mart 4\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK4">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K5 (สาขา 51)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK5" placeholder="C:\Users\...\K mart 5\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK5">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 SP (คลังสินค้า 00)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathSP" placeholder="C:\Users\...\Desktop">
+                                <button class="sp-browse-btn" data-save-target="savePathSP">📂</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ปุ่มบันทึกการตั้งค่าทั้งหมดสำหรับหน้าที่สอง -->
+                <button class="save-btn" id="saveBillPathsBtn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾 บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
+
+                <div class="branch-group" id="billResultCard" style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7;">
+                    <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
+                    <div id="billResultContent" style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
