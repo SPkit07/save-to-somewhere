@@ -36,11 +36,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeBranchPaths();
     await loadPathsFromLocalStorage();
     setupEventListeners();
+    setupWindowStatePersistence();
     
     // Page 2 (Bill Processor) Initializations
     await loadBillFormFromBackend();
     setupBillFormEventListeners();
-    fetchBillSuggestions();
 });
 
 // ==================== EVENT LISTENERS ====================
@@ -55,6 +55,35 @@ function setupEventListeners() {
 
     // Save Button
     saveBtn.addEventListener('click', savePathsToLocalStorage);
+}
+
+function setupWindowStatePersistence() {
+    let saveTimer = null;
+
+    const saveCurrentWindowState = () => {
+        if (!DESKTOP_MODE || typeof eel === 'undefined' || !eel.save_window_state) return;
+
+        const state = {
+            width: window.outerWidth || window.innerWidth,
+            height: window.outerHeight || window.innerHeight,
+            x: typeof window.screenX === 'number' ? window.screenX : 50,
+            y: typeof window.screenY === 'number' ? window.screenY : 50
+        };
+
+        eel.save_window_state(state)();
+    };
+
+    const scheduleSave = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveCurrentWindowState, 250);
+    };
+
+    window.addEventListener('resize', scheduleSave);
+    window.addEventListener('move', scheduleSave);
+    window.addEventListener('beforeunload', saveCurrentWindowState);
+
+    setTimeout(saveCurrentWindowState, 1000);
+    setInterval(saveCurrentWindowState, 3000);
 }
 
 function setupBillFormEventListeners() {

@@ -8,7 +8,6 @@ import json
 import traceback
 from pathlib import Path
 from typing import Dict
-import numpy as np
 
 # Fix Unicode encoding สำหรับ Thai characters บน Windows
 if sys.platform == 'win32':
@@ -27,9 +26,8 @@ except ImportError:
 
 # Import from modular components
 try:
-    from config import SERVER_HOST, CORS_ORIGINS, BRANCH_NAMES
+    from config import BRANCH_NAMES
     from logger import setup_logger
-    from processors import process_excel_file, validate_receive_piece
 except ImportError as e:
     print(f"❌ Import error: {e}")
     print("Make sure config.py, logger.py, processors.py exist in the same directory")
@@ -72,6 +70,8 @@ def preview_excel_file(file_path: str) -> Dict:
     """
     try:
         import pandas as pd
+        import numpy as np
+        from processors import validate_receive_piece
         
         logger.info(f"Previewing file: {file_path}")
         
@@ -232,6 +232,8 @@ def process_file_from_desktop(file_path: str, paths_config: Dict[str, str]) -> D
         Processing result
     """
     try:
+        from processors import process_excel_file
+
         logger.info(f"Processing file from desktop: {file_path}")
         
         # Validate file exists
@@ -354,13 +356,73 @@ def save_temp_file(filename: str, base64_data: str) -> str:
         return ""
 
 # ==================== CONFIG MANAGEMENT ====================
+def get_app_config_dir() -> str:
+    """Get the folder where runtime configuration files are stored."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def get_config_path() -> str:
     """Get the path to the configuration file"""
-    if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, "paths_config.json")
+    return os.path.join(get_app_config_dir(), "paths_config.json")
+
+
+def get_window_state_path() -> str:
+    """Get the path to the saved window state file."""
+    return os.path.join(get_app_config_dir(), "window_state.json")
+
+
+def load_window_state() -> Dict[str, int]:
+    """Load saved window size and position for eel.start."""
+    default_state = {"width": 1400, "height": 900, "x": 50, "y": 50}
+    state_path = get_window_state_path()
+
+    try:
+        if os.path.exists(state_path):
+            with open(state_path, 'r', encoding='utf-8') as f:
+                saved_state = json.load(f)
+
+            width = int(saved_state.get("width", default_state["width"]))
+            height = int(saved_state.get("height", default_state["height"]))
+            x = int(saved_state.get("x", default_state["x"]))
+            y = int(saved_state.get("y", default_state["y"]))
+
+            return {
+                "width": max(800, min(width, 3840)),
+                "height": max(600, min(height, 2160)),
+                "x": x,
+                "y": y,
+            }
+    except Exception as e:
+        logger.warning(f"Error loading window state from {state_path}: {e}")
+
+    return default_state
+
+
+@eel.expose
+def save_window_state(state: Dict) -> bool:
+    """Save current browser window size and position."""
+    try:
+        width = int(state.get("width", 1400))
+        height = int(state.get("height", 900))
+        x = int(state.get("x", 50))
+        y = int(state.get("y", 50))
+
+        clean_state = {
+            "width": max(800, min(width, 3840)),
+            "height": max(600, min(height, 2160)),
+            "x": x,
+            "y": y,
+        }
+
+        with open(get_window_state_path(), 'w', encoding='utf-8') as f:
+            json.dump(clean_state, f, ensure_ascii=False, indent=4)
+
+        return True
+    except Exception as e:
+        logger.error(f"Error saving window state: {e}")
+        return False
 
 @eel.expose
 def load_paths_config() -> Dict:
@@ -579,11 +641,13 @@ def start_app():
     
     try:
         # เปิด UI ที่ port ค่าเริ่มต้น (ใช้ port random เพื่อหลีกเลี่ยง conflict)
+        window_state = load_window_state()
+
         eel.start(
             'index.html',
-            size=(1400, 900),
-            position=(50, 50),
-            disable_cache=True,
+            size=(window_state["width"], window_state["height"]),
+            position=(window_state["x"], window_state["y"]),
+            disable_cache=False,
             port=0  # ให้ OS เลือก port อัตโนมัติ
         )
     
