@@ -355,6 +355,16 @@ function showPreviewModal(preview) {
         updateBranchDisplay(preview.detected_branch);
     }
     
+    // อัปเดตสรุปข้อมูลไฟล์ล่าสุดเพื่อแสดงค้างบนหน้าจอ
+    const fileSummaryDisplay = document.getElementById('fileSummaryDisplay');
+    if (fileSummaryDisplay) {
+        document.getElementById('summaryFileName').textContent = preview.file_name;
+        document.getElementById('summaryTotalRows').textContent = preview.total_rows;
+        document.getElementById('summarySPCount').textContent = preview.sp_count || 0;
+        document.getElementById('summaryWHCount').textContent = preview.wh_count || 0;
+        fileSummaryDisplay.style.display = 'block';
+    }
+    
     // แสดง modal
     modal.style.display = 'flex';
     statusMessage.style.display = 'none';  // ซ่อน status message

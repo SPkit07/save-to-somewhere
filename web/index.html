@@ -785,6 +785,18 @@
                 <div class="branch-code" id="branchCode">ยังไม่มีการเลือกไฟล์</div>
             </div>
 
+            <!-- กล่องสรุปข้อมูลไฟล์ล่าสุด -->
+            <div class="branch-display" id="fileSummaryDisplay" style="display: none; padding: 15px; border-left-color: #f39c12; margin-top: -5px;">
+                <h2 style="color: #d35400; font-size: 15px; margin-bottom: 10px; border-bottom: 1px solid #fce4ec; padding-bottom: 5px;">สรุปข้อมูลไฟล์ล่าสุด</h2>
+                <div style="font-size: 14px; text-align: left;">
+                    <p style="margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="ชื่อไฟล์"><strong>📁</strong> <span id="summaryFileName" style="color: #34495e;">-</span></p>
+                    <p style="margin-bottom: 5px;"><strong>📊 จำนวนแถวรวม:</strong> <span id="summaryTotalRows" style="color: #3498db; font-weight: bold;">0</span></p>
+                    <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #bdc3c7;">
+                    <p style="margin-bottom: 5px;"><strong>🏪 หน้าร้าน (SP):</strong> <span id="summarySPCount" style="color: #2ecc71; font-weight: bold;">0</span> แถว</p>
+                    <p style="margin-bottom: 0;"><strong>🏢 โกดัง (WH):</strong> <span id="summaryWHCount" style="color: #e74c3c; font-weight: bold;">0</span> แถว</p>
+                </div>
+            </div>
+
             <div class="dropzone" id="dropzone">
                 <div class="dropzone-icon">📊</div>
                 <div class="dropzone-text">
@@ -802,11 +814,11 @@
         </div>
 
         <!-- ==================== RIGHT SECTION ==================== -->
-        <div class="right-section">
-            <h2>⚙️ ตั้งค่า Path ปลายทาง</h2>
+        <details class="right-section">
+            <summary>⚙️ ตั้งค่า Path ปลายทาง</summary>
             <div class="branch-paths" id="branchPaths"></div>
             <button class="save-btn" id="saveBtn">💾 บันทึกการตั้งค่า</button>
-        </div>
+        </details>
     </div>
 
     <!-- Tab 2: Bill Processor (Second Page) -->
