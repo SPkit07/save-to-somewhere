@@ -358,11 +358,15 @@ function showPreviewModal(preview) {
     // อัปเดตสรุปข้อมูลไฟล์ล่าสุดเพื่อแสดงค้างบนหน้าจอ
     const fileSummaryDisplay = document.getElementById('fileSummaryDisplay');
     if (fileSummaryDisplay) {
-        document.getElementById('summaryFileName').textContent = preview.file_name;
+        const branchStr = preview.branch_name && preview.branch_name !== 'Unknown' ? preview.branch_name : (preview.detected_branch || 'Unknown');
+        let exportFiles = `📁 ${branchStr}-SP.txt`;
+        if (preview.detected_branch !== 'SP') {
+            exportFiles += `<br>📁 ${branchStr}-WH.txt`;
+        }
+        document.getElementById('summaryFileName').innerHTML = exportFiles;
         document.getElementById('summaryTotalRows').textContent = preview.total_rows;
         document.getElementById('summarySPCount').textContent = preview.sp_count || 0;
         document.getElementById('summaryWHCount').textContent = preview.wh_count || 0;
-        fileSummaryDisplay.style.display = 'block';
     }
     
     // แสดง modal
@@ -376,6 +380,25 @@ function closePreviewModal() {
         modal.style.display = 'none';
     }
     currentPreviewData = null;
+}
+
+// ==================== SHOW ERROR MODAL ====================
+function showErrorModal(message) {
+    const modal = document.getElementById('errorModal');
+    const msgEl = document.getElementById('errorModalMessage');
+    if (modal && msgEl) {
+        msgEl.textContent = message;
+        modal.style.display = 'flex';
+    } else {
+        alert(message);
+    }
+}
+
+function closeErrorModal() {
+    const modal = document.getElementById('errorModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 // ==================== VALIDATE PATHS & DIRECTORIES ====================
@@ -428,7 +451,8 @@ async function confirmProcess() {
     const validation = await validatePathsAndDirectories();
     if (!validation.valid) {
         const errorMsg = validation.errors.join('\n');
-        showStatus(errorMsg, 'error');
+        showErrorModal(errorMsg);
+        showStatus('❌ พบข้อผิดพลาดในการตั้งค่า Path', 'error');
         return;
     }
 
