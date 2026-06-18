@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -181,13 +182,15 @@
 
         /* ==================== RIGHT SECTION ==================== */
         .right-section {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            height: 80vh;    
             overflow-y: auto;
             min-width: 0;
             min-height: 0;
+                
         }
 
         .right-section h2 {
@@ -463,7 +466,8 @@
             justify-content: flex-end;
         }
 
-        .btn-cancel, .btn-confirm {
+        .btn-cancel,
+        .btn-confirm {
             padding: 12px 24px;
             border: none;
             border-radius: 6px;
@@ -507,7 +511,8 @@
             font-size: 13px;
         }
 
-        .warning-table th, .warning-table td {
+        .warning-table th,
+        .warning-table td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ecf0f1;
@@ -540,17 +545,21 @@
             flex-wrap: nowrap;
             overflow-x: auto;
         }
+
         .tabs-container::-webkit-scrollbar {
             height: 6px;
         }
+
         .tabs-container::-webkit-scrollbar-track {
             background: #ecf0f1;
             border-radius: 10px;
         }
+
         .tabs-container::-webkit-scrollbar-thumb {
             background: #bdc3c7;
             border-radius: 10px;
         }
+
         .tab-button {
             background: #ffffff;
             color: #7f8c8d;
@@ -567,26 +576,31 @@
             white-space: nowrap;
             min-width: 0;
         }
+
         .tab-button:hover {
             color: #2c3e50;
             background: #f8fafb;
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
         }
+
         .tab-button.active {
             color: white;
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             border-color: #3498db;
             box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
+
         .tab-button.active.bill-tab-btn {
             background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
             border-color: #9b59b6;
             box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
         }
+
         .tab-content {
             display: none !important;
         }
+
         .tab-content.active-tab {
             display: grid !important;
         }
@@ -596,6 +610,7 @@
             position: relative;
             width: 100%;
         }
+
         .autocomplete-wrapper input {
             width: 100%;
             padding: 12px 40px 12px 15px;
@@ -606,12 +621,14 @@
             transition: all 0.3s ease;
             background-color: #f8fafb;
         }
+
         .autocomplete-wrapper input:focus {
             outline: none;
             border-color: #9b59b6;
             box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.15);
             background-color: #fff;
         }
+
         .autocomplete-wrapper .search-icon {
             position: absolute;
             right: 14px;
@@ -621,6 +638,7 @@
             color: #9b59b6;
             pointer-events: none;
         }
+
         .autocomplete-dropdown {
             position: absolute;
             top: calc(100% + 4px);
@@ -635,14 +653,24 @@
             z-index: 100;
             display: none;
         }
+
         .autocomplete-dropdown.show {
             display: block;
             animation: dropdownSlide 0.2s ease;
         }
+
         @keyframes dropdownSlide {
-            from { opacity: 0; transform: translateY(-6px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .autocomplete-item {
             padding: 10px 16px;
             cursor: pointer;
@@ -653,38 +681,47 @@
             gap: 10px;
             transition: background 0.15s;
         }
+
         .autocomplete-item:first-child {
             border-radius: 12px 12px 0 0;
         }
+
         .autocomplete-item:last-child {
             border-radius: 0 0 12px 12px;
         }
+
         .autocomplete-item:hover,
         .autocomplete-item.highlighted {
             background: linear-gradient(90deg, #f3e8ff 0%, #f8fafb 100%);
         }
+
         .autocomplete-item .ac-icon {
             font-size: 14px;
             color: #9b59b6;
             flex-shrink: 0;
         }
+
         .autocomplete-item .ac-text {
             flex: 1;
         }
+
         .autocomplete-item .ac-text mark {
             background: transparent;
             color: #9b59b6;
             font-weight: 700;
         }
+
         .autocomplete-empty {
             padding: 14px 16px;
             text-align: center;
             color: #95a5a6;
             font-size: 13px;
         }
+
         .autocomplete-dropdown::-webkit-scrollbar {
             width: 6px;
         }
+
         .autocomplete-dropdown::-webkit-scrollbar-thumb {
             background: #d5d5d5;
             border-radius: 3px;
@@ -696,12 +733,14 @@
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 12px;
         }
+
         .save-path-item {
             background: #fff;
             border-radius: 8px;
             padding: 12px 14px;
             border: 1px solid #e2e8f0;
         }
+
         .save-path-item .sp-label {
             font-size: 12px;
             font-weight: 700;
@@ -710,11 +749,13 @@
             letter-spacing: 0.5px;
             margin-bottom: 6px;
         }
+
         .save-path-item .sp-input-row {
             display: flex;
             gap: 6px;
             min-width: 0;
         }
+
         .save-path-item .sp-input-row input {
             flex: 1;
             min-width: 0;
@@ -725,11 +766,13 @@
             font-family: 'Courier New', monospace;
             transition: border-color 0.2s;
         }
+
         .save-path-item .sp-input-row input:focus {
             outline: none;
             border-color: #9b59b6;
-            box-shadow: 0 0 0 2px rgba(155,89,182,0.1);
+            box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.1);
         }
+
         .save-path-item .sp-browse-btn {
             background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
             color: white;
@@ -742,9 +785,10 @@
             white-space: nowrap;
             transition: all 0.2s;
         }
+
         .save-path-item .sp-browse-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(155,89,182,0.3);
+            box-shadow: 0 3px 8px rgba(155, 89, 182, 0.3);
         }
 
         @media (max-width: 700px) {
@@ -762,7 +806,8 @@
         }
 
         @media (max-width: 480px) {
-            .path-input-group > div[style*="display: flex"],
+
+            .path-input-group>div[style*="display: flex"],
             .save-path-item .sp-input-row {
                 flex-direction: column;
             }
@@ -780,11 +825,14 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Navigation Tabs -->
     <div class="tabs-container">
-        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก (ประมวลผลสาขา)</button>
-        <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB สาขา</button>
+        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก
+            (ประมวลผลสาขา)</button>
+        <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB
+            สาขา</button>
     </div>
 
     <!-- Tab 1: Original Excel Processor -->
@@ -815,49 +863,70 @@
 
         <!-- ==================== RIGHT SECTION ==================== -->
         <div style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
-            <div class="branch-display" style="border-left-color: #3498db; text-align: left; padding: 25px;">
-                <h2 style="color: #2c3e50; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">⚙️ ตั้งค่า Path ปลายทาง</h2>
-                <div class="branch-paths" id="branchPaths"></div>
-                <button class="save-btn" id="saveBtn" style="margin-top: 20px;">💾 บันทึกการตั้งค่า</button>
-            </div>
-
             <!-- กล่องสรุปข้อมูลไฟล์ล่าสุด -->
-            <div id="fileSummaryDisplay" style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-left: 5px solid #f39c12;">
-                <h2 style="color: #d35400; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #fce4ec; padding-bottom: 10px;">📊 สรุปข้อมูลไฟล์ล่าสุด</h2>
-                
+            <div id="fileSummaryDisplay"
+                style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-left: 5px solid #f39c12;">
+                <h2
+                    style="color: #d35400; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #fce4ec; padding-bottom: 10px; cursor: pointer;">
+                    📊 สรุปข้อมูลไฟล์ล่าสุด</h2>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <!-- Card 1 -->
-                    <div style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                        <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">📍 ชื่อสาขา</p>
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📍 ชื่อสาขา</p>
                         <p id="summaryBranchName" style="font-size: 16px; font-weight: bold; color: #2c3e50;">-</p>
                     </div>
 
                     <!-- Card 2 -->
-                    <div style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                        <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">📊 จำนวนแถวรวม</p>
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📊 จำนวนแถวรวม</p>
                         <p id="summaryTotalRows" style="font-size: 20px; font-weight: bold; color: #3498db;">0</p>
                     </div>
 
                     <!-- Card 3 -->
-                    <div style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2;">
-                        <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">📁 ชื่อไฟล์ที่เซฟ</p>
-                        <p id="summaryFileName" style="font-size: 14px; color: #34495e; word-break: break-all; font-family: monospace;">-</p>
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📁 ชื่อไฟล์ที่เซฟ</p>
+                        <p id="summaryFileName"
+                            style="font-size: 14px; color: #34495e; word-break: break-all; font-family: monospace;">-
+                        </p>
                     </div>
 
                     <!-- Card 4 -->
-                    <div style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; justify-content: space-around; align-items: center;">
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; justify-content: space-around; align-items: center;">
                         <div style="text-align: center; flex: 1;">
-                            <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">🏪 หน้าร้าน (SP)</p>
+                            <p
+                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                                🏪 หน้าร้าน (SP)</p>
                             <p id="summarySPCount" style="font-size: 20px; font-weight: bold; color: #2ecc71;">0</p>
                         </div>
                         <div style="width: 2px; background: #e2e8f0; height: 100%; min-height: 40px;"></div>
                         <div style="text-align: center; flex: 1;">
-                            <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">🏢 โกดัง (WH)</p>
+                            <p
+                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                                🏢 โกดัง (WH)</p>
                             <p id="summaryWHCount" style="font-size: 20px; font-weight: bold; color: #e74c3c;">0</p>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <details class="branch-display" style="border-left-color: #3498db; text-align: left; padding: 25px;">
+                <summary
+                    style="color: #2c3e50; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; cursor: pointer;">
+                    ⚙️ ตั้งค่า Path ปลายทาง</summary>
+                <div class="branch-paths" id="branchPaths"></div>
+                <button class="save-btn" id="saveBtn" style="margin-top: 20px;">💾 บันทึกการตั้งค่า</button>
+            </details>
         </div>
     </div>
 
@@ -866,11 +935,13 @@
         <!-- LEFT SECTION: Inputs and Run -->
         <div class="left-section">
             <div class="branch-display" style="border-left-color: #9b59b6; text-align: left;">
-                <h2 style="color: #9b59b6; font-size: 16px; margin-bottom: 15px; text-transform: uppercase;">🏢 เลือกข้อมูลบิลย้อนหลัง</h2>
-                
+                <h2 style="color: #9b59b6; font-size: 16px; margin-bottom: 15px; text-transform: uppercase;">🏢
+                    เลือกข้อมูลบิลย้อนหลัง</h2>
+
                 <div style="margin-bottom: 20px;">
                     <label class="path-label" style="margin-bottom: 8px;">🏬 เลือกสาขา (Kmart)</label>
-                    <select id="kmartSelect" class="path-input" style="font-family: inherit; font-size: 14px; font-weight: 500; height: auto;">
+                    <select id="kmartSelect" class="path-input"
+                        style="font-family: inherit; font-size: 14px; font-weight: 500; height: auto;">
                         <option value="K1">K1 (สาขา 11)</option>
                         <option value="K2">K2 (สาขา 21)</option>
                         <option value="K3">K3 (สาขา 31)</option>
@@ -883,40 +954,47 @@
                 <div style="margin-bottom: 20px;">
                     <label class="path-label" style="margin-bottom: 8px;">🔍 ค้นหาบิล (เดือน - ท้ายบิล)</label>
                     <div class="autocomplete-wrapper">
-                        <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3" autocomplete="off">
+                        <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3"
+                            autocomplete="off">
                         <span class="search-icon">🔍</span>
                         <div class="autocomplete-dropdown" id="billDropdown"></div>
                     </div>
                 </div>
             </div>
 
-            <button class="save-btn" id="runBillBtn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 0; display: block;">🚀 เริ่มประมวลผลบิล</button>
+            <button class="save-btn" id="runBillBtn"
+                style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 0; display: block;">🚀
+                เริ่มประมวลผลบิล</button>
 
             <div class="status-message" id="billStatusMessage" style="border-left-color: #9b59b6;">
                 <span class="status-icon" id="billStatusIcon">⏳</span>
                 <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
             </div>
 
-            <div class="branch-group" id="billResultCard" style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7; max-height: 280px; overflow-y: auto;">
+            <div class="branch-group" id="billResultCard"
+                style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7; max-height: 280px; overflow-y: auto;">
                 <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
-                <div id="billResultContent" style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
+                <div id="billResultContent"
+                    style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
             </div>
         </div>
 
         <!-- RIGHT SECTION: Directory Settings & Logs -->
         <div class="right-section">
             <h2>⚙️ ตั้งค่าโฟลเดอร์ & เส้นทางประมวลผล</h2>
-            
+
             <div class="branch-paths">
                 <!-- Search Paths (part_a, part_b) -->
                 <div class="branch-group" style="border-left-color: #3498db;">
                     <h3>🔎 โฟลเดอร์ค้นหาไฟล์ Excel</h3>
-                    
+
                     <div class="path-input-group">
                         <label class="path-label">📂 part_a (Google Drive KMART ใช้งาน)</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="partAInput" class="path-input" placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
-                            <button class="browse-btn" id="browsePartABtn" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                            <input type="text" id="partAInput" class="path-input"
+                                placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
+                            <button class="browse-btn" id="browsePartABtn"
+                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
                         </div>
                     </div>
 
@@ -924,7 +1002,8 @@
                         <label class="path-label">📂 part_b (Google Drive SP)</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="text" id="partBInput" class="path-input" placeholder="เลือกโฟลเดอร์ SP">
-                            <button class="browse-btn" id="browsePartBBtn" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                            <button class="browse-btn" id="browsePartBBtn"
+                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
                         </div>
                     </div>
                 </div>
@@ -979,7 +1058,9 @@
                 </div>
 
                 <!-- ปุ่มบันทึกการตั้งค่าทั้งหมดสำหรับหน้าที่สอง -->
-                <button class="save-btn" id="saveBillPathsBtn" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾 บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
+                <button class="save-btn" id="saveBillPathsBtn"
+                    style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾
+                    บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
 
             </div>
         </div>
@@ -992,23 +1073,23 @@
                 <h2>📋 สรุปข้อมูลไฟล์ก่อนประมวลผล</h2>
                 <button class="modal-close" onclick="closePreviewModal()">&times;</button>
             </div>
-            
+
             <div class="modal-body">
                 <div class="preview-item">
                     <label>📄 ชื่อไฟล์:</label>
                     <span id="previewFileName">-</span>
                 </div>
-                
+
                 <div class="preview-item">
                     <label>📊 จำนวนแถวทั้งหมด:</label>
                     <span id="previewTotalRows">-</span> บรรทัด
                 </div>
-                
+
                 <div class="preview-item">
                     <label>🏢 สาขา:</label>
                     <span id="previewBranch">-</span> (รหัส: <span id="previewBranchCode">-</span>)
                 </div>
-                
+
                 <div class="preview-split">
                     <div class="preview-item-half">
                         <label>🛍️ หน้าร้าน (SP):</label>
@@ -1020,7 +1101,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closePreviewModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="confirmProcess()">✅ ยืนยันและประมวลผล</button>
@@ -1035,7 +1116,7 @@
                 <h2>⚠️ คำเตือน: ข้อมูลไม่ตรงกัน</h2>
                 <button class="modal-close" onclick="closeWarningModal()">&times;</button>
             </div>
-            
+
             <div class="modal-body">
                 <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;" id="warningModalMessage">
                     พบข้อมูลในคอลัมน์ เบิก และ รับ (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:
@@ -1056,10 +1137,11 @@
                     </table>
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeWarningModal()">ยกเลิก</button>
-                <button class="btn-confirm" onclick="continueToPreview()" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+                <button class="btn-confirm" onclick="continueToPreview()"
+                    style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
@@ -1071,7 +1153,7 @@
                 <h2>⚠️ คำเตือน: ข้อมูล RECEIVE_PIECE ไม่สมบูรณ์</h2>
                 <button class="modal-close" onclick="closeReceiveWarningModal()">&times;</button>
             </div>
-            
+
             <div class="modal-body">
                 <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;">
                     พบข้อมูล RECEIVE_PIECE > 0 แต่ RE_SKU_CODE เป็นค่าว่าง กรุณาตรวจสอบ:
@@ -1092,10 +1174,11 @@
                     </table>
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeReceiveWarningModal()">ยกเลิก</button>
-                <button class="btn-confirm" onclick="continueFromReceiveToPreview()" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+                <button class="btn-confirm" onclick="continueFromReceiveToPreview()"
+                    style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
@@ -1107,13 +1190,14 @@
                 <h2>⚠️ พบข้อผิดพลาด</h2>
                 <button class="modal-close" onclick="closeErrorModal()">&times;</button>
             </div>
-            
+
             <div class="modal-body">
-                <div style="color: #c0392b; font-size: 15px; font-weight: 500; white-space: pre-wrap;" id="errorModalMessage">
+                <div style="color: #c0392b; font-size: 15px; font-weight: 500; white-space: pre-wrap;"
+                    id="errorModalMessage">
                     -
                 </div>
             </div>
-            
+
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeErrorModal()">ปิดหน้าต่าง</button>
             </div>
@@ -1129,17 +1213,18 @@
                 if (mutation.attributeName === 'style' || mutation.attributeName === 'class') {
                     const branchName = document.getElementById('branchName').innerText;
                     const summaryBranchName = document.getElementById('summaryBranchName');
-                    if(summaryBranchName) {
+                    if (summaryBranchName) {
                         summaryBranchName.innerText = branchName;
                     }
                 }
             });
         });
-        
+
         const summaryDisplayEl = document.getElementById('fileSummaryDisplay');
-        if(summaryDisplayEl) {
+        if (summaryDisplayEl) {
             summaryObserver.observe(summaryDisplayEl, { attributes: true });
         }
     </script>
 </body>
+
 </html>

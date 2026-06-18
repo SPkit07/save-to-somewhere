@@ -358,12 +358,8 @@ function showPreviewModal(preview) {
     // อัปเดตสรุปข้อมูลไฟล์ล่าสุดเพื่อแสดงค้างบนหน้าจอ
     const fileSummaryDisplay = document.getElementById('fileSummaryDisplay');
     if (fileSummaryDisplay) {
-        const branchStr = preview.branch_name && preview.branch_name !== 'Unknown' ? preview.branch_name : (preview.detected_branch || 'Unknown');
-        let exportFiles = `📁 ${branchStr}-SP.txt`;
-        if (preview.detected_branch !== 'SP') {
-            exportFiles += `<br>📁 ${branchStr}-WH.txt`;
-        }
-        document.getElementById('summaryFileName').innerHTML = exportFiles;
+        document.getElementById('summaryBranchName').textContent = `${document.getElementById('branchName').textContent} (${document.getElementById('branchCode').textContent.replace('รหัสสาขา: ', '')})`;
+        document.getElementById('summaryFileName').innerHTML = '<span style="color: #95a5a6;">(รอประมวลผล)</span>';
         document.getElementById('summaryTotalRows').textContent = preview.total_rows;
         document.getElementById('summarySPCount').textContent = preview.sp_count || 0;
         document.getElementById('summaryWHCount').textContent = preview.wh_count || 0;
@@ -466,6 +462,19 @@ async function confirmProcess() {
             showStatus(`✅ ${result.message}`, 'success');
             if (result.detected_branch) {
                 updateBranchDisplay(result.detected_branch);
+            }
+            // อัปเดตชื่อไฟล์ที่เซฟใน Card 3
+            if (result.saved_file_names && result.saved_file_names.length > 0) {
+                let exportFilesHtml = '';
+                result.saved_file_names.forEach(name => {
+                    exportFilesHtml += `📁 ${name}<br>`;
+                });
+                document.getElementById('summaryFileName').innerHTML = exportFilesHtml;
+            }
+            // กางหน้าต่างสรุปข้อมูลออกอัตโนมัติ
+            const summaryDetails = document.getElementById('fileSummaryDisplay');
+            if (summaryDetails) {
+                summaryDetails.open = true;
             }
         } else {
             showStatus(`❌ ${result.message}`, 'error');
