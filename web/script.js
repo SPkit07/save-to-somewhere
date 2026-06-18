@@ -585,6 +585,15 @@ async function savePathsToLocalStorage() {
         return;
     }
 
+    // ตรวจสอบว่า directory มีอยู่จริงหรือไม่ก่อนเซฟ (ตามที่ user ต้องการ)
+    showStatus('⏳ กำลังตรวจสอบที่อยู่ปลายทาง...', 'loading');
+    const validation = await validatePathsAndDirectories();
+    if (!validation.valid) {
+        showStatus('❌ โฟลเดอร์ปลายทางไม่มีอยู่จริง กรุณาตรวจสอบ', 'error');
+        showErrorModal(validation.errors.join('\n'));
+        return;
+    }
+
     if (DESKTOP_MODE) {
         try {
             const success = await eel.save_paths_config(mergedPaths)();
@@ -930,6 +939,31 @@ async function saveBillPathsToBackend() {
         showBillStatus('❌ กรุณาระบุโฟลเดอร์ part_a หรือ part_b อย่างน้อยหนึ่งแห่ง', 'error');
         return;
     }
+
+    // ตรวจสอบว่าโฟลเดอร์มีอยู่จริงหรือไม่
+    showBillStatus('⏳ กำลังตรวจสอบโฟลเดอร์...', 'loading');
+    const errors = [];
+    
+    if (partA && !(await eel.check_directory_exists(partA)())) {
+        errors.push(`❌ ไม่พบโฟลเดอร์ค้นหา: ${partA}`);
+    }
+    if (partB && !(await eel.check_directory_exists(partB)())) {
+        errors.push(`❌ ไม่พบโฟลเดอร์ค้นหา: ${partB}`);
+    }
+    
+    for (const id of Object.keys(savePaths)) {
+        const path = savePaths[id];
+        if (path && !(await eel.check_directory_exists(path)())) {
+            const label = id.replace('savePath', '');
+            errors.push(`❌ ไม่พบโฟลเดอร์ปลายทาง (${label}): ${path}`);
+        }
+    }
+    
+    if (errors.length > 0) {
+        showBillStatus('❌ โฟลเดอร์ที่ระบุไม่มีอยู่จริง', 'error');
+        showErrorModal(errors.join('\n'));
+        return;
+    }
     
     // Save to localStorage (original behavior)
     saveBillFormToLocalStorage();
@@ -1075,6 +1109,13 @@ async function runBillProcessor() {
     }
     if (!partA && !partB) {
         showBillStatus('❌ กรุณาระบุโฟลเดอร์ part_a หรือ part_b อย่างน้อยหนึ่งแห่ง', 'error');
+        return;
+    }
+    
+    // ตรวจสอบโฟลเดอร์ปลายทางว่ามีอยู่จริงไหม
+    if (!(await eel.check_directory_exists(destPath)())) {
+        showBillStatus(`❌ ไม่พบโฟลเดอร์ปลายทางที่ระบุ: ${destPath}`, 'error');
+        showErrorModal(`โฟลเดอร์ปลายทางสำหรับเซฟไฟล์ ${kmart} ไม่มีอยู่จริง\nโปรดตรวจสอบหรือสร้างโฟลเดอร์: ${destPath}`);
         return;
     }
     
