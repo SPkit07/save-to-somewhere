@@ -467,6 +467,12 @@ def process_excel_file(
         
         merged_paths = paths_config if paths_config else {}
         
+        # --- เพิ่ม Logic การสร้าง Folder ตามเดือน-ปี พ.ศ. ---
+        now_dt = datetime.now()
+        current_month = now_dt.strftime("%m")
+        current_year_th = now_dt.year + 543
+        month_folder_name = f"{current_month}-{current_year_th}"
+        
         # 🏪 [ส่วนที่ 1] กรองผ่านคอลัมน์ประเภท == 1 (หน้าร้าน)
         if current_branch == "SP":
             cond_main = (extracted_code == "00")
@@ -477,12 +483,15 @@ def process_excel_file(
         
         if not main_data.empty:
             main_file_name = f"{b_name}-SP-{DATE_SUFFIX}.txt"
-            main_path = merged_paths.get(current_branch)
-            if main_path and ensure_directory_exists(main_path):
-                main_full_path = os.path.join(main_path, main_file_name)
-                with open(main_full_path, 'w', encoding='utf-8') as f:
-                    f.write('\n'.join(main_data.astype(str).tolist()))
-                results.append(f"🏪 เซฟหน้าร้านสำเร็จ: {main_full_path} (รวม {len(main_data)} แถว)")
+            base_main_path = merged_paths.get(current_branch)
+            if base_main_path:
+                # สร้างโครงสร้าง Base Path / เดือน-ปี
+                main_path = os.path.join(base_main_path, month_folder_name)
+                if ensure_directory_exists(main_path):
+                    main_full_path = os.path.join(main_path, main_file_name)
+                    with open(main_full_path, 'w', encoding='utf-8') as f:
+                        f.write('\n'.join(main_data.astype(str).tolist()))
+                    results.append(f"🏪 เซฟหน้าร้านสำเร็จ: {main_full_path} (รวม {len(main_data)} แถว)")
                 
         # 🏢 [ส่วนที่ 2] กรองผ่านคอลัมน์ประเภท == 2 (โกดัง)
         if current_branch == "SP":
@@ -494,12 +503,15 @@ def process_excel_file(
         if not (isinstance(data_00, list) or data_00.empty):
             file_name_00 = f"{b_name}-WH-{DATE_SUFFIX}.txt"
             key_00 = f"{current_branch}_00"
-            path_00 = merged_paths.get(key_00)
-            if path_00 and ensure_directory_exists(path_00):
-                full_path_00 = os.path.join(path_00, file_name_00)
-                with open(full_path_00, 'w', encoding='utf-8') as f:
-                    f.write('\n'.join(data_00.astype(str).tolist()))
-                results.append(f"🏢 เซฟโกดังสำเร็จ  : {full_path_00} (รวม {len(data_00)} แถว)")
+            base_path_00 = merged_paths.get(key_00)
+            if base_path_00:
+                # สร้างโครงสร้าง Base Path / เดือน-ปี
+                path_00 = os.path.join(base_path_00, month_folder_name)
+                if ensure_directory_exists(path_00):
+                    full_path_00 = os.path.join(path_00, file_name_00)
+                    with open(full_path_00, 'w', encoding='utf-8') as f:
+                        f.write('\n'.join(data_00.astype(str).tolist()))
+                    results.append(f"🏢 เซฟโกดังสำเร็จ  : {full_path_00} (รวม {len(data_00)} แถว)")
         
         if not results:
             results.append("⚠️ ประมวลผลสำเร็จ แต่ไม่ได้เซฟไฟล์ใดๆ (กรุณาตั้งค่า Path ให้ครบถ้วน)")

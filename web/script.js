@@ -495,11 +495,17 @@ function initializeBranchPaths() {
             html += `
                 <div class="path-input-group">
                     <label class="path-label">📁 ${branch}-SP (รหัส ${code})</label>
-                    <input type="text" class="path-input" data-key="${code}" placeholder="เช่น: C:\\Users\\USER\\Desktop\\${branch}">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="path_${code}" class="path-input" data-key="${code}" placeholder="เช่น: C:\\Users\\USER\\Desktop\\${branch}">
+                        <button class="browse-btn page1-browse-btn" data-target="path_${code}" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                    </div>
                 </div>
                 <div class="path-input-group">
                     <label class="path-label">📦 ${branch}-WH (รหัส 00)</label>
-                    <input type="text" class="path-input" data-key="${code}_00" placeholder="เช่น: C:\\Users\\USER\\Desktop\\${code}00">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="path_${code}_00" class="path-input" data-key="${code}_00" placeholder="เช่น: C:\\Users\\USER\\Desktop\\${code}00">
+                        <button class="browse-btn page1-browse-btn" data-target="path_${code}_00" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                    </div>
                 </div>
             `;
         } else {
@@ -507,7 +513,10 @@ function initializeBranchPaths() {
             html += `
                 <div class="path-input-group">
                     <label class="path-label">📁 SP (รหัส ${code})</label>
-                    <input type="text" class="path-input" data-key="SP" placeholder="เช่น: C:\\Users\\USER\\Desktop\\SP00">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="path_${code}" class="path-input" data-key="SP" placeholder="เช่น: C:\\Users\\USER\\Desktop\\SP00">
+                        <button class="browse-btn page1-browse-btn" data-target="path_${code}" style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                    </div>
                 </div>
             `;
         }
@@ -516,6 +525,17 @@ function initializeBranchPaths() {
     });
 
     branchPathsContainer.innerHTML = html;
+
+    // Add event listeners for the new browse buttons
+    document.querySelectorAll('.page1-browse-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const targetId = btn.getAttribute('data-target');
+            const path = await eel.select_directory_dialog()();
+            if (path) {
+                document.getElementById(targetId).value = path;
+            }
+        });
+    });
 }
 
 // ==================== LOCALSTORAGE / BACKEND MANAGEMENT ====================

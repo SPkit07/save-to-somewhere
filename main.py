@@ -318,6 +318,7 @@ def select_directory_dialog() -> str:
         
         root = tk.Tk()
         root.withdraw()
+        root.attributes('-topmost', True)  # ให้ dialog อยู่บน
         
         dir_path = filedialog.askdirectory(title="เลือกโฟลเดอร์บันทึก")
         
