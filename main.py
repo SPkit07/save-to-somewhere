@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
@@ -597,17 +598,27 @@ def process_pass_2_save(kmart: str, bill: str, path_dest: str, part_a: str, part
                 "message": f"❌ รหัสสาขาไม่ตรงกัน! รหัสสาขาในไฟล์คือ '{file_branch_code}' แต่ต้องการรหัสของ {kmart} คือ '{expected_code}'"
             }
             
-        # เซฟไฟล์ปลายทาง
-        save_path = os.path.join(path_dest, f"{kmart}-{bill}.txt")
-        original_dest = path_dest
+        # --- สร้าง Folder ตามเดือน-ปี พ.ศ. (เหมือนหน้าแรก) ---
+        now_dt = datetime.now()
+        current_month = now_dt.strftime("%m")
+        current_year_th = now_dt.year + 543
+        month_folder_name = f"{current_month}-{current_year_th}"
         
-        # ตรวจสอบไฟล์ซ้ำ ถ้ามี ให้เปลี่ยนชื่อแล้วเซฟลง path_dest เหมือนเดิม
+        # สร้างโฟลเดอร์เดือน-ปี ถ้ายังไม่มี
+        month_path = os.path.join(path_dest, month_folder_name)
+        os.makedirs(month_path, exist_ok=True)
+        logger.info(f"📁 Pass2: โฟลเดอร์เดือน-ปี: {month_path}")
+        
+        # เซฟไฟล์ปลายทาง (ลงในโฟลเดอร์เดือน-ปี)
+        save_path = os.path.join(month_path, f"{kmart}-{bill}.txt")
+        
+        # ตรวจสอบไฟล์ซ้ำ ถ้ามี ให้เปลี่ยนชื่อแล้วเซฟลงโฟลเดอร์เดือน-ปีเดิม
         # (part_a / part_b ใช้แค่ค้นหาไฟล์ Excel เท่านั้น ไม่ใช้เซฟ)
         is_duplicate = False
         if os.path.exists(save_path):
             is_duplicate = True
             txt_filename = f"{kmart}-{bill}-1.txt"
-            save_path = os.path.join(path_dest, txt_filename)
+            save_path = os.path.join(month_path, txt_filename)
                 
         # แปลงเป็นสตริง, ลบช่องว่างหน้า-หลังแต่ละบรรทัด, และบันทึก
         raw_text = df.to_string(index=False, header=False)
