@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('web', 'web'), ('config.json', '.')]
+datas = [('web', 'web')]
 binaries = []
 hiddenimports = ['pandas', 'numpy', 'openpyxl', 'eel']
 tmp_ret = collect_all('eel')

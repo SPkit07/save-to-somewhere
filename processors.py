@@ -7,74 +7,7 @@ import os
 from datetime import datetime
 from typing import Dict, Tuple, Optional
 from logger import logger
-from config import BRANCH_NAMES, DEFAULT_PATHS, DATE_FORMAT_THAI, OUTPUT_FILE_ENCODING
-
-# ==================== BRANCH DETECTION ====================
-def detect_file_branch(df: pd.DataFrame) -> Optional[str]:
-    """
-    ตรวจพบสาขาจากไฟล์ Excel
-    
-    Args:
-        df: DataFrame from Excel file
-    
-    Returns:
-        Branch code (11, 21, 31, 41, 51, SP) or None
-    """
-    try:
-        if "ReBplus" not in df.columns:
-            logger.error("Column 'ReBplus' not found in Excel file")
-            return None
-        
-        # Extract branch codes (position 2 from ReBplus split by comma)
-        all_codes = df["ReBplus"].astype(str).str.split(",").str.get(2).str.strip().unique()
-        logger.debug(f"Found codes in file: {all_codes}")
-        
-        # Check main branch codes first
-        for branch_code in ["11", "21", "31", "41", "51"]:
-            if branch_code in all_codes:
-                logger.info(f"Detected main branch: {branch_code}")
-                return branch_code
-        
-        # If no main branch, check for warehouse (SP)
-        if "00" in all_codes:
-            logger.info("Detected warehouse (SP)")
-            return "SP"
-        
-        logger.warning("No recognized branch code found")
-        return None
-        
-    except Exception as e:
-        logger.error(f"Error detecting branch: {e}", exc_info=True)
-        return None
-
-# ==================== DATA VALIDATION ====================
-def validate_excel_structure(df: pd.DataFrame) -> Tuple[bool, str]:
-    """
-    ตรวจสอบโครงสร้าง Excel file
-    
-    Args:
-        df: DataFrame to validate
-    
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    required_columns = ["ReBplus", "1=SP,2=WH"]
-    
-    # Check required columns
-    for col in required_columns:
-        if col not in df.columns:
-            msg = f"Required column missing: {col}"
-            logger.error(msg)
-            return False, msg
-    
-    # Check for invalid '0' values in type column
-    if (df["1=SP,2=WH"] == 0).any():
-        msg = "❌ [ERROR]: ตรวจพบค่า '0' ในคอลัมน์ 1=SP,2=WH ซึ่งไม่ถูกต้อง!"
-        logger.error(msg)
-        return False, msg
-    
-    logger.debug("Excel structure validation passed")
-    return True, ""
+from config import BRANCH_NAMES
 
 def validate_receive_piece(df: pd.DataFrame) -> Tuple[bool, list]:
     """
@@ -147,48 +80,7 @@ def validate_receive_piece(df: pd.DataFrame) -> Tuple[bool, list]:
         logger.error(f"Error checking RECEIVE_PIECE and RE_SKU_CODE: {e}", exc_info=True)
         return True, []
 
-# ==================== DATA CLEANING ====================
-def clean_excel_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    ทำความสะอาดข้อมูล Excel
-    
-    Args:
-        df: DataFrame to clean
-    
-    Returns:
-        Cleaned DataFrame
-    """
-    try:
-        if "RECEIVE_PIECE" in df.columns:
-            # Clear ReBplus for rows where RECEIVE_PIECE == 0
-            initial_count = len(df)
-            df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
-            cleared_count = len(df[df["ReBplus"].isna()])
-            logger.info(f"Cleaned {cleared_count} rows where RECEIVE_PIECE == 0")
-        
-        return df
-    except Exception as e:
-        logger.error(f"Error cleaning data: {e}", exc_info=True)
-        return df
-
 # ==================== PATH MANAGEMENT ====================
-def merge_paths(user_paths: Dict[str, str]) -> Dict[str, str]:
-    """
-    ตรวจสอบว่า user ระบุ paths ทั้งหมดเอง
-    ไม่มีค่าเริ่มต้น - ผู้ใช้จำเป็นต้องระบุเอง
-    
-    Args:
-        user_paths: User-provided paths
-    
-    Returns:
-        User paths (no defaults merged)
-    """
-    if not user_paths:
-        logger.warning("No paths provided by user. All paths must be specified explicitly.")
-        return {}
-    
-    logger.info(f"Using {len(user_paths)} user-provided paths")
-    return user_paths
 
 def ensure_directory_exists(path: str) -> bool:
     """
@@ -208,78 +100,6 @@ def ensure_directory_exists(path: str) -> bool:
         logger.error(f"Failed to create directory {path}: {e}")
         return False
 
-# ==================== FILE GENERATION ====================
-def get_thai_date_suffix() -> str:
-    """
-    สร้าง date suffix ในรูปแบบไทย
-    เช่น "17-5-69 รับ"
-    
-    Returns:
-        Date suffix string
-    """
-    now = datetime.now()
-    thai_year = now.year + 543 - 2500
-    return f"{now.day}-{now.month}-{thai_year} รับ"
-
-def save_output_file(filepath: str, data: pd.Series) -> bool:
-    """
-    บันทึกข้อมูลลง .txt file
-    
-    Args:
-        filepath: Output file path
-        data: Data to save
-    
-    Returns:
-        True if successful
-    """
-    try:
-        content = '\n'.join(data.astype(str).tolist())
-        with open(filepath, 'w', encoding=OUTPUT_FILE_ENCODING) as f:
-            f.write(content)
-        logger.info(f"File saved: {filepath} ({len(data)} rows)")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to save file {filepath}: {e}", exc_info=True)
-        return False
-
-# ==================== FILTER & EXTRACT DATA ====================
-def extract_middle_code(df: pd.DataFrame) -> pd.Series:
-    """
-    Extract middle code (position 2) from ReBplus
-    
-    Args:
-        df: DataFrame
-    
-    Returns:
-        Series of extracted codes
-    """
-    sku_str = df["ReBplus"].astype(str).str.strip()
-    return sku_str.str.split(",").str.get(2).str.strip()
-
-def get_type_column(df: pd.DataFrame) -> pd.Series:
-    """
-    Get type column (1=SP, 2=WH) with fallback logic
-    
-    Args:
-        df: DataFrame
-    
-    Returns:
-        Type column Series
-    """
-    type_col_name = "1=SP,2=WH"
-    
-    if type_col_name in df.columns:
-        return df[type_col_name]
-    
-    # Fallback: try to find similar column
-    alt_names = [c for c in df.columns if "1=" in str(c) or "WH" in str(c)]
-    if alt_names:
-        logger.warning(f"Using alternative column: {alt_names[0]}")
-        return df[alt_names[0]]
-    
-    # Last resort: use second column
-    logger.warning("Using column index 1 as fallback")
-    return df.iloc[:, 1]
 
 # ==================== COLUMN J & K VALIDATION ====================
 def check_columns_j_k_match(df: pd.DataFrame) -> Tuple[bool, list]:

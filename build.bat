@@ -140,17 +140,24 @@ echo.
 pause
 exit /b 0
 
-REM ===============================================
-REM SUBROUTINE: BUILD_EXE
-REM ===============================================
 :BUILD_EXE
 
-REM ใช้อินเทอร์พรีตเตอร์ Python หลักในเครื่อง
-echo Using global Python environment...
+REM ตรวจสอบว่ามี Virtual Environment (venv) หรือไม่
+if exist "venv\Scripts\python.exe" (
+    echo ✅ Detected Virtual Environment (venv)
+    echo Using venv Python interpreter to build executable...
+    set PYTHON_CMD=venv\Scripts\python.exe
+    set PIP_CMD=venv\Scripts\pip.exe
+) else (
+    echo ⚠️ Virtual Environment (venv) not found
+    echo Using global Python environment...
+    set PYTHON_CMD=python
+    set PIP_CMD=pip
+)
 
 echo.
 echo - Installing build dependencies...
-pip install eel pyinstaller --quiet
+%PIP_CMD% install eel pyinstaller --quiet
 
 echo.
 echo - Checking web files...
@@ -171,12 +178,11 @@ echo.
 echo - Creating executable...
 echo.
 
-python -m PyInstaller ^
+%PYTHON_CMD% -m PyInstaller ^
     --name "ExcelProcessor" ^
     --onefile ^
     --windowed ^
     --add-data "web;web" ^
-    --add-data "config.json;." ^
     --hidden-import=pandas ^
     --hidden-import=numpy ^
     --hidden-import=openpyxl ^
@@ -226,7 +232,6 @@ if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
 echo - Copying files...
 copy "dist\ExcelProcessor.exe" "%INSTALL_DIR%\" >nul 2>&1
-if exist "config.json" copy "config.json" "%INSTALL_DIR%\" >nul 2>&1
 if exist "config.py" copy "config.py" "%INSTALL_DIR%\" >nul 2>&1
 
 echo - Creating Start Menu shortcut...
@@ -295,7 +300,6 @@ if exist "%INSTALL_DIR%\ExcelProcessor.exe" (
 
 echo - Installing new version...
 copy "dist\ExcelProcessor.exe" "%INSTALL_DIR%\ExcelProcessor.exe" >nul 2>&1
-if exist "config.json" copy "config.json" "%INSTALL_DIR%\" >nul 2>&1
 
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ Update failed - restoring backup...
