@@ -462,6 +462,24 @@ def check_directory_exists(directory_path: str) -> bool:
 
 
 @eel.expose
+def open_folder_in_explorer(folder_path: str) -> bool:
+    """เปิดโฟลเดอร์ใน Windows Explorer"""
+    try:
+        # Normalize path separators for Windows
+        normalized_path = os.path.normpath(folder_path)
+        if os.path.isdir(normalized_path):
+            os.startfile(normalized_path)
+            logger.info(f"📂 Opened folder in Explorer: {normalized_path}")
+            return True
+        else:
+            logger.warning(f"Folder not found: {normalized_path}")
+            return False
+    except Exception as e:
+        logger.error(f"Error opening folder: {e}")
+        return False
+
+
+@eel.expose
 def get_bill_suggestions(kmart: str, part_a: str, part_b: str) -> list:
     """
     แสกนหาชื่อไฟล์ใน part_a และ part_b ตามรูปแบบ <kmart>-*.XLSX / <kmart>-*.xlsx (case-insensitive)

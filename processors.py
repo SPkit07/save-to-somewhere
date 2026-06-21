@@ -285,6 +285,7 @@ def process_excel_file(
         b_name = BRANCH_NAMES.get(current_branch, current_branch)
         results = []
         saved_file_names = []
+        saved_file_paths = []
         
         merged_paths = paths_config if paths_config else {}
         
@@ -314,6 +315,7 @@ def process_excel_file(
                         f.write('\n'.join(main_data.astype(str).tolist()))
                     results.append(f"🏪 เซฟหน้าร้านสำเร็จ: {main_full_path} (รวม {len(main_data)} แถว)")
                     saved_file_names.append(main_file_name)
+                    saved_file_paths.append(main_path)
                 
         # 🏢 [ส่วนที่ 2] กรองผ่านคอลัมน์ประเภท == 2 (โกดัง)
         if current_branch == "SP":
@@ -335,6 +337,7 @@ def process_excel_file(
                         f.write('\n'.join(data_00.astype(str).tolist()))
                     results.append(f"🏢 เซฟโกดังสำเร็จ  : {full_path_00} (รวม {len(data_00)} แถว)")
                     saved_file_names.append(file_name_00)
+                    saved_file_paths.append(path_00)
         
         if not results:
             results.append("⚠️ ประมวลผลสำเร็จ แต่ไม่ได้เซฟไฟล์ใดๆ (กรุณาตั้งค่า Path ให้ครบถ้วน)")
@@ -349,7 +352,8 @@ def process_excel_file(
             "detected_branch": current_branch,
             "branch_name": b_name,
             "files_saved": results,
-            "saved_file_names": saved_file_names
+            "saved_file_names": saved_file_names,
+            "saved_file_paths": saved_file_paths
         }
         
         # เพิ่ม warnings ถ้ามี

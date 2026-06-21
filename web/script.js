@@ -466,10 +466,36 @@ async function confirmProcess() {
             // อัปเดตชื่อไฟล์ที่เซฟใน Card 3
             if (result.saved_file_names && result.saved_file_names.length > 0) {
                 let exportFilesHtml = '';
-                result.saved_file_names.forEach(name => {
-                    exportFilesHtml += `📁 ${name}<br>`;
+                result.saved_file_names.forEach((name, index) => {
+                    const folderPath = (result.saved_file_paths && result.saved_file_paths[index]) || '';
+                    if (folderPath) {
+                        exportFilesHtml += `<span class="saved-file-link" data-folder-path="${folderPath.replace(/\\/g, '\\\\')}" title="คลิกเพื่อเปิดโฟลเดอร์ปลายทาง">📁 ${name}</span><br>`;
+                    } else {
+                        exportFilesHtml += `📁 ${name}<br>`;
+                    }
                 });
                 document.getElementById('summaryFileName').innerHTML = exportFilesHtml;
+
+                // Bind click events to the saved file links
+                document.querySelectorAll('.saved-file-link').forEach(link => {
+                    link.addEventListener('click', async function() {
+                        const folderPath = this.getAttribute('data-folder-path');
+                        if (folderPath && DESKTOP_MODE) {
+                            this.style.opacity = '0.6';
+                            try {
+                                const opened = await eel.open_folder_in_explorer(folderPath)();
+                                if (!opened) {
+                                    showStatus('❌ ไม่สามารถเปิดโฟลเดอร์ได้ (อาจถูกลบหรือย้ายไปแล้ว)', 'error');
+                                }
+                            } catch (err) {
+                                console.error('Error opening folder:', err);
+                                showStatus('❌ เกิดข้อผิดพลาดในการเปิดโฟลเดอร์', 'error');
+                            } finally {
+                                this.style.opacity = '1';
+                            }
+                        }
+                    });
+                });
             }
             // กางหน้าต่างสรุปข้อมูลออกอัตโนมัติ
             const summaryDetails = document.getElementById('fileSummaryDisplay');

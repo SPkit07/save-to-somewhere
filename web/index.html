@@ -186,11 +186,11 @@
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            height: 80vh;    
+            height: 80vh;
             overflow-y: auto;
             min-width: 0;
             min-height: 0;
-                
+
         }
 
         .right-section h2 {
@@ -823,6 +823,26 @@
                 display: block;
             }
         }
+
+        /* ==================== SAVED FILE LINK (Card 3 clickable) ==================== */
+        .saved-file-link {
+            cursor: pointer;
+            color: #2980b9;
+            transition: all 0.2s ease;
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .saved-file-link:hover {
+            color: #1a5276;
+            text-decoration: underline;
+            background-color: rgba(52, 152, 219, 0.08);
+        }
+
+        .saved-file-link:active {
+            transform: scale(0.97);
+        }
     </style>
 </head>
 
@@ -907,14 +927,14 @@
                             <p
                                 style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
                                 🏪 หน้าร้าน (SP)</p>
-                            <p id="summarySPCount" style="font-size: 20px; font-weight: bold; color: #2ecc71;">0</p>
+                            <p id="summarySPCount" style="font-size: 30px; font-weight: bold; color: #1caa57;">0</p>
                         </div>
                         <div style="width: 2px; background: #e2e8f0; height: 100%; min-height: 40px;"></div>
                         <div style="text-align: center; flex: 1;">
                             <p
                                 style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
                                 🏢 โกดัง (WH)</p>
-                            <p id="summaryWHCount" style="font-size: 20px; font-weight: bold; color: #e74c3c;">0</p>
+                            <p id="summaryWHCount" style="font-size: 30px; font-weight: bold; color: #e24635;">0</p>
                         </div>
                     </div>
                 </div>
