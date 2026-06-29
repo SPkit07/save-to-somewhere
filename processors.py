@@ -205,8 +205,9 @@ def process_excel_file(
     logger.info(f"Starting file processing: {file_path}")
     
     try:
-        # ===== 1. Read Excel File =====
-        df = pd.read_excel(file_path)
+        # ===== 1. Read Excel File Safely (Prevents Locking) =====
+        with open(file_path, 'rb') as f:
+            df = pd.read_excel(f)
         logger.info(f"Excel loaded: {df.shape[0]} rows, {df.shape[1]} columns")
         
         # ===== 2. Validation like Save.ipynb =====

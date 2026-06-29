@@ -89,8 +89,9 @@ def preview_excel_file(file_path: str) -> Dict:
                 "message": "ไฟล์ต้องเป็น Excel (.xlsx หรือ .xls)"
             }
         
-        # Read Excel
-        df = pd.read_excel(file_path)
+        # Read Excel safely using with open to prevent file locking
+        with open(file_path, 'rb') as f:
+            df = pd.read_excel(f)
         
         # 1. Clean Data like Save.ipynb
         if "RECEIVE_PIECE" in df.columns:
@@ -480,6 +481,16 @@ def open_folder_in_explorer(folder_path: str) -> bool:
 
 
 @eel.expose
+def terminate_program() -> None:
+    """ปิดโปรแกรมทันทีเพื่อคลายไฟล์ล็อกทั้งหมด"""
+    logger.info("❌ Program termination requested by user to release file locks.")
+    # หน่วงเวลานิดหน่อยเพื่อให้ frontend ปิดตัวเรียบร้อยก่อนปิด backend
+    import time
+    time.sleep(0.2)
+    raise SystemExit(0)
+
+
+@eel.expose
 def get_bill_suggestions(kmart: str, part_a: str, part_b: str) -> list:
     """
     แสกนหาชื่อไฟล์ใน part_a และ part_b ตามรูปแบบ <kmart>-*.XLSX / <kmart>-*.xlsx (case-insensitive)
@@ -589,8 +600,9 @@ def process_pass_2_save(kmart: str, bill: str, path_dest: str, part_a: str, part
     logger.info(f"Pass 2 processing using file: {target_file}")
     
     try:
-        # อ่าน Excel คอลัมน์แรก ตั้งชื่อ 'forBplus'
-        df = pd.read_excel(target_file, engine='openpyxl', usecols='A', names=['forBplus'])
+        # อ่าน Excel คอลัมน์แรก ตั้งชื่อ 'forBplus' อย่างปลอดภัยเพื่อหลีกเลี่ยงการล็อกไฟล์
+        with open(target_file, 'rb') as f:
+            df = pd.read_excel(f, engine='openpyxl', usecols='A', names=['forBplus'])
         
         if df.empty:
             return {

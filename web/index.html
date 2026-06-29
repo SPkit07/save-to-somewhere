@@ -605,6 +605,149 @@
             display: grid !important;
         }
 
+        /* ==================== PREMIUM HEADER & TOGGLE SWITCH ==================== */
+        .header-bar {
+            position: relative;
+            z-index: 10000;
+            max-width: 1400px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            width: 100%;
+        }
+
+        .header-logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            background: #f8fafb;
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .status-label {
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e74c3c;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #2ecc71;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2ecc71;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .status-state-text {
+            min-width: 90px;
+            color: #2ecc71;
+            font-weight: 700;
+            transition: color 0.3s;
+        }
+
+        .status-state-text.off {
+            color: #e74c3c;
+        }
+
+        /* Fullscreen Overlay for shutdown */
+        .shutdown-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .shutdown-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #e74c3c;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* ==================== GOOGLE-STYLE AUTOCOMPLETE ==================== */
         .autocomplete-wrapper {
             position: relative;
@@ -847,6 +990,21 @@
 </head>
 
 <body>
+    <!-- Premium Header with ON/OFF Switch -->
+    <div class="header-bar">
+        <div class="header-logo">
+            <span class="logo-icon">📊</span> Excel File Processor
+        </div>
+        <div class="status-toggle-container">
+            <span class="status-label">สวิตช์ปิด/เปิดโปรแกรม (หลอก Bplus):</span>
+            <label class="switch">
+                <input type="checkbox" id="programStatusToggle" checked>
+                <span class="slider round"></span>
+            </label>
+            <span class="status-state-text" id="statusStateText">เปิดทำงาน (ON)</span>
+        </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <div class="tabs-container">
         <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก
@@ -1201,6 +1359,17 @@
                     style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
+    </div>
+
+    <!-- ==================== SHUTDOWN OVERLAY ==================== -->
+    <div class="shutdown-overlay" id="shutdownOverlay">
+        <span style="font-size: 64px; margin-bottom: 10px;">🔴</span>
+        <h2 style="font-size: 26px; font-weight: 600; color: #e74c3c;">โปรแกรมปิดการทำงานชั่วคราว (OFF)</h2>
+        <p style="color: #ecf0f1; font-size: 16px; max-width: 500px; line-height: 1.6;">
+            ระบบได้ปล่อยและคืนค่าการใช้งานไฟล์ทั้งหมดแล้ว (ไฟล์ไม่ถูกล็อก)<br>
+            คุณสามารถเปิดใช้งานระบบ Business Plus ได้ตามปกติ โดยไม่ต้องปิดหน้าต่างนี้<br>
+            <span style="color: #2ecc71; font-weight: bold; margin-top: 10px; display: block;">💡 เลื่อนสวิตช์มุมขวาบนกลับเป็น ON เพื่อเริ่มทำงานอีกครั้ง</span>
+        </p>
     </div>
 
     <!-- ==================== ERROR MODAL ==================== -->

@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Page 2 (Bill Processor) Initializations
     await loadBillFormFromBackend();
     setupBillFormEventListeners();
+    
+    // Program ON/OFF Switch
+    setupProgramStatusToggle();
 });
 
 // ==================== EVENT LISTENERS ====================
@@ -1195,4 +1198,56 @@ function showBillStatus(message, type = 'loading') {
             msgEl.style.display = 'none';
         }, 7000);
     }
+}
+
+// ==================== PROGRAM STATUS TOGGLE (OFFLINE SIMULATION) ====================
+function setupProgramStatusToggle() {
+    const toggle = document.getElementById('programStatusToggle');
+    const stateText = document.getElementById('statusStateText');
+    const overlay = document.getElementById('shutdownOverlay');
+
+    if (!toggle || !stateText) return;
+
+    const requestProgramShutdown = () => {
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+
+        if (typeof eel !== 'undefined' && eel.terminate_program) {
+            try {
+                eel.terminate_program()(function() {});
+            } catch (error) {
+                console.error('Failed to terminate program:', error);
+            }
+        } else {
+            try {
+                window.close();
+            } catch (error) {
+                console.error('Failed to close window:', error);
+            }
+        }
+    };
+
+    toggle.addEventListener('change', function() {
+        if (!this.checked) {
+            // User switched OFF -> shut down the desktop app cleanly
+            stateText.textContent = "ปิดทำงาน (OFF)";
+            stateText.classList.add('off');
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+
+            setTimeout(requestProgramShutdown, 180);
+        } else {
+            // User switched ON
+            stateText.textContent = "เปิดทำงาน (ON)";
+            stateText.classList.remove('off');
+
+            // Hide overlay instantly
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+    });
 }
