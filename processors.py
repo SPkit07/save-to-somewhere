@@ -1,15 +1,13 @@
 """
 processors.py - Business Logic for Excel Processing
 """
-import pandas as pd
-import numpy as np
 import os
 from datetime import datetime
 from typing import Dict, Tuple, Optional
 from logger import logger
 from config import BRANCH_NAMES
 
-def validate_receive_piece(df: pd.DataFrame) -> Tuple[bool, list]:
+def validate_receive_piece(df) -> Tuple[bool, list]:
     """
     ตรวจสอบข้อมูลคอลัมน์ RECEIVE_PIECE และ RE_SKU_CODE
     เงื่อนไข:
@@ -23,6 +21,7 @@ def validate_receive_piece(df: pd.DataFrame) -> Tuple[bool, list]:
         Tuple of (is_valid, error_details_list)
     """
     try:
+        import pandas as pd
         if "RECEIVE_PIECE" not in df.columns or "RE_SKU_CODE" not in df.columns:
             logger.info("RECEIVE_PIECE or RE_SKU_CODE column not found - skipping check")
             return True, []
@@ -102,7 +101,7 @@ def ensure_directory_exists(path: str) -> bool:
 
 
 # ==================== COLUMN J & K VALIDATION ====================
-def check_columns_j_k_match(df: pd.DataFrame) -> Tuple[bool, list]:
+def check_columns_j_k_match(df) -> Tuple[bool, list]:
     """
     ตรวจสอบว่าคอลัมน์ J และ K (ทั้งคู่มีชื่อ '1=SP,2=WH') ตรงกันหรือไม่
     
@@ -115,6 +114,7 @@ def check_columns_j_k_match(df: pd.DataFrame) -> Tuple[bool, list]:
         - error_details_list: List of dicts with mismatch information
     """
     try:
+        import pandas as pd
         # ค้นหาคอลัมน์ที่มีชื่อ "1=SP,2=WH"
         type_cols = [c for c in df.columns if "1=SP,2=WH" in str(c)]
         
@@ -199,6 +199,9 @@ def process_excel_file(
     """
     ประมวลผลไฟล์ Excel หลัก (ทำตาม Save.ipynb แบบเป๊ะๆ)
     """
+    import pandas as pd
+    import numpy as np
+    
     logger.info(f"Starting file processing: {file_path}")
     
     try:

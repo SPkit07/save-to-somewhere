@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel File Processor - Path Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100dvh;
+            padding: 20px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            width: min(100%, 1400px);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(320px, 0.95fr) minmax(380px, 1.05fr);
+            gap: 20px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        /* ==================== LEFT SECTION ==================== */
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .branch-display {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border-left: 5px solid #3498db;
+        }
+
+        .branch-display h2 {
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .branch-name {
+            font-size: 42px;
+            font-weight: 700;
+            color: #3498db;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .branch-code {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .dropzone {
+            flex: 1;
+            background: white;
+            border: 3px dashed #bdc3c7;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dropzone:hover {
+            border-color: #3498db;
+            background-color: #f8fafb;
+            transform: translateY(-2px);
+        }
+
+        .dropzone.dragover {
+            background-color: #ebf5fb;
+            border-color: #3498db;
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+        }
+
+        .dropzone-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+
+        .dropzone-text {
+            text-align: center;
+        }
+
+        .dropzone-text h3 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 18px;
+        }
+
+        .dropzone-text p {
+            color: #95a5a6;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .browse-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .browse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .status-message {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            border-left: 5px solid #2ecc71;
+        }
+
+        .status-message.error {
+            border-left-color: #e74c3c;
+            background-color: #fadbd8;
+            color: #c0392b;
+        }
+
+        .status-message.success {
+            border-left-color: #2ecc71;
+            background-color: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .status-message.loading {
+            border-left-color: #f39c12;
+            background-color: #fef5e7;
+            color: #d68910;
+        }
+
+        .status-icon {
+            font-size: 18px;
+        }
+
+        /* ==================== RIGHT SECTION ==================== */
+        .right-section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            height: 80vh;
+            overflow-y: auto;
+            min-width: 0;
+            min-height: 0;
+
+        }
+
+        .right-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        .branch-paths {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .branch-group {
+            background: #f8fafb;
+            border-radius: 8px;
+            padding: 18px;
+            border-left: 5px solid #3498db;
+            min-width: 0;
+        }
+
+        .branch-group h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .path-input-group {
+            margin-bottom: 12px;
+        }
+
+        .path-input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .path-label {
+            display: block;
+            color: #34495e;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .path-input {
+            width: 100%;
+            min-width: 0;
+            padding: 12px 15px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .path-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            background-color: #f8fafb;
+        }
+
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .save-btn:active {
+            transform: translateY(0);
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                flex: 0 1 auto;
+                min-height: 0;
+                gap: 20px;
+            }
+
+            .right-section {
+                overflow-y: visible;
+            }
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                gap: 12px;
+            }
+
+            .left-section {
+                gap: 12px;
+            }
+
+            .branch-display,
+            .right-section,
+            .branch-group {
+                padding: 16px;
+            }
+
+            .branch-name {
+                font-size: 32px;
+            }
+        }
+
+        /* ==================== SCROLLBAR ==================== */
+        .right-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .right-section::-webkit-scrollbar-track {
+            background: #ecf0f1;
+            border-radius: 10px;
+        }
+
+        .right-section::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 10px;
+        }
+
+        .right-section::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
+        }
+
+        /* ==================== PREVIEW MODAL ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            opacity: 0.8;
+        }
+
+        .modal-body {
+            padding: 25px;
+            background: #f8fafb;
+        }
+
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+
+        .preview-item:last-of-type {
+            border-bottom: none;
+        }
+
+        .preview-item label {
+            color: #2c3e50;
+            font-weight: 600;
+            min-width: 150px;
+        }
+
+        .preview-item span {
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .preview-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #ecf0f1;
+        }
+
+        .preview-item-half {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #ecf0f1;
+        }
+
+        .preview-item-half label {
+            display: block;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .count {
+            display: block;
+            font-size: 32px;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 5px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            background: white;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel,
+        .btn-confirm {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .btn-cancel:hover {
+            background: #bdc3c7;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        /* ==================== WARNING TABLE ==================== */
+        .warning-table-container {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #ecf0f1;
+            border-radius: 6px;
+        }
+
+        .warning-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .warning-table th,
+        .warning-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .warning-table th {
+            background-color: #f8fafb;
+            color: #2c3e50;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .warning-table tr:hover {
+            background-color: #fdfefe;
+        }
+
+        .warning-table td.mismatch {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        /* ==================== TABS SWITCHER STYLE ==================== */
+        .tabs-container {
+            max-width: 1400px;
+            margin: 0 0 20px 0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+
+        .tabs-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .tabs-container::-webkit-scrollbar-track {
+            background: #ecf0f1;
+            border-radius: 10px;
+        }
+
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 10px;
+        }
+
+        .tab-button {
+            background: #ffffff;
+            color: #7f8c8d;
+            border: 1px solid #e2e8f0;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            font-family: inherit;
+            flex: 1 1 auto;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .tab-button:hover {
+            color: #2c3e50;
+            background: #f8fafb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-button.active {
+            color: white;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-color: #3498db;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .tab-button.active.bill-tab-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            border-color: #9b59b6;
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+        }
+
+        .tab-content {
+            display: none !important;
+        }
+
+        .tab-content.active-tab {
+            display: grid !important;
+        }
+
+        /* ==================== GOOGLE-STYLE AUTOCOMPLETE ==================== */
+        .autocomplete-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .autocomplete-wrapper input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 24px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background-color: #f8fafb;
+        }
+
+        .autocomplete-wrapper input:focus {
+            outline: none;
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.15);
+            background-color: #fff;
+        }
+
+        .autocomplete-wrapper .search-icon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #9b59b6;
+            pointer-events: none;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+            animation: dropdownSlide 0.2s ease;
+        }
+
+        @keyframes dropdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .autocomplete-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+
+        .autocomplete-item:first-child {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .autocomplete-item:last-child {
+            border-radius: 0 0 12px 12px;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background: linear-gradient(90deg, #f3e8ff 0%, #f8fafb 100%);
+        }
+
+        .autocomplete-item .ac-icon {
+            font-size: 14px;
+            color: #9b59b6;
+            flex-shrink: 0;
+        }
+
+        .autocomplete-item .ac-text {
+            flex: 1;
+        }
+
+        .autocomplete-item .ac-text mark {
+            background: transparent;
+            color: #9b59b6;
+            font-weight: 700;
+        }
+
+        .autocomplete-empty {
+            padding: 14px 16px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 13px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: #d5d5d5;
+            border-radius: 3px;
+        }
+
+        /* ==================== SAVE PATH MINI GROUP (Tab 2) ==================== */
+        .save-paths-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .save-path-item {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .save-path-item .sp-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .save-path-item .sp-input-row {
+            display: flex;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .save-path-item .sp-input-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid #d5dbe0;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.2s;
+        }
+
+        .save-path-item .sp-input-row input:focus {
+            outline: none;
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.1);
+        }
+
+        .save-path-item .sp-browse-btn {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .save-path-item .sp-browse-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(155, 89, 182, 0.3);
+        }
+
+        @media (max-width: 700px) {
+            .tabs-container {
+                margin-bottom: 12px;
+            }
+
+            .tab-button {
+                padding: 11px 14px;
+            }
+
+            .save-paths-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            .path-input-group>div[style*="display: flex"],
+            .save-path-item .sp-input-row {
+                flex-direction: column;
+            }
+
+            .browse-btn,
+            .save-path-item .sp-browse-btn {
+                width: 100%;
+            }
+
+            .modal-footer,
+            .preview-item,
+            .preview-split {
+                display: block;
+            }
+        }
+
+        /* ==================== SAVED FILE LINK (Card 3 clickable) ==================== */
+        .saved-file-link {
+            cursor: pointer;
+            color: #2980b9;
+            transition: all 0.2s ease;
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .saved-file-link:hover {
+            color: #1a5276;
+            text-decoration: underline;
+            background-color: rgba(52, 152, 219, 0.08);
+        }
+
+        .saved-file-link:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation Tabs -->
+    <div class="tabs-container">
+        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก
+            (ประมวลผลสาขา)</button>
+        <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB
+            สาขา</button>
+    </div>
+
+    <!-- Tab 1: Original Excel Processor -->
+    <div id="tab-processor" class="tab-content container active-tab">
+        <!-- ==================== LEFT SECTION ==================== -->
+        <div class="left-section">
+            <div class="branch-display">
+                <h2>ตรวจพบสาขา</h2>
+                <div class="branch-name" id="branchName">-</div>
+                <div class="branch-code" id="branchCode">ยังไม่มีการเลือกไฟล์</div>
+            </div>
+
+            <div class="dropzone" id="dropzone">
+                <div class="dropzone-icon">📊</div>
+                <div class="dropzone-text">
+                    <h3>ลากไฟล์ Excel มาปล่อยที่นี่</h3>
+                    <p>หรือ</p>
+                    <button class="browse-btn" id="browseBtn">เลือกไฟล์</button>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+            </div>
+
+            <div class="status-message" id="statusMessage">
+                <span class="status-icon" id="statusIcon">⏳</span>
+                <span id="statusText">กำลังประมวลผล...</span>
+            </div>
+        </div>
+
+        <!-- ==================== RIGHT SECTION ==================== -->
+        <div style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
+            <!-- กล่องสรุปข้อมูลไฟล์ล่าสุด -->
+            <div id="fileSummaryDisplay"
+                style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-left: 5px solid #f39c12;">
+                <h2
+                    style="color: #d35400; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #fce4ec; padding-bottom: 10px; cursor: pointer;">
+                    📊 สรุปข้อมูลไฟล์ล่าสุด</h2>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <!-- Card 1 -->
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📍 ชื่อสาขา</p>
+                        <p id="summaryBranchName" style="font-size: 16px; font-weight: bold; color: #2c3e50;">-</p>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📊 จำนวนแถวรวม</p>
+                        <p id="summaryTotalRows" style="font-size: 20px; font-weight: bold; color: #3498db;">0</p>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2;">
+                        <p
+                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                            📁 ชื่อไฟล์ที่เซฟ</p>
+                        <p id="summaryFileName"
+                            style="font-size: 14px; color: #34495e; word-break: break-all; font-family: monospace;">-
+                        </p>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div
+                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; justify-content: space-around; align-items: center;">
+                        <div style="text-align: center; flex: 1;">
+                            <p
+                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                                🏪 หน้าร้าน (SP)</p>
+                            <p id="summarySPCount" style="font-size: 30px; font-weight: bold; color: #1caa57;">0</p>
+                        </div>
+                        <div style="width: 2px; background: #e2e8f0; height: 100%; min-height: 40px;"></div>
+                        <div style="text-align: center; flex: 1;">
+                            <p
+                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
+                                🏢 โกดัง (WH)</p>
+                            <p id="summaryWHCount" style="font-size: 30px; font-weight: bold; color: #e24635;">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <details class="branch-display" style="border-left-color: #3498db; text-align: left; padding: 25px;">
+                <summary
+                    style="color: #2c3e50; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; cursor: pointer;">
+                    ⚙️ ตั้งค่า Path ปลายทาง</summary>
+                <div class="branch-paths" id="branchPaths"></div>
+                <button class="save-btn" id="saveBtn" style="margin-top: 20px;">💾 บันทึกการตั้งค่า</button>
+            </details>
+        </div>
+    </div>
+
+    <!-- Tab 2: Bill Processor (Second Page) -->
+    <div id="tab-bill-processor" class="tab-content container">
+        <!-- LEFT SECTION: Inputs and Run -->
+        <div class="left-section">
+            <div class="branch-display" style="border-left-color: #9b59b6; text-align: left;">
+                <h2 style="color: #9b59b6; font-size: 16px; margin-bottom: 15px; text-transform: uppercase;">🏢
+                    เลือกข้อมูลบิลย้อนหลัง</h2>
+
+                <div style="margin-bottom: 20px;">
+                    <label class="path-label" style="margin-bottom: 8px;">🏬 เลือกสาขา (Kmart)</label>
+                    <select id="kmartSelect" class="path-input"
+                        style="font-family: inherit; font-size: 14px; font-weight: 500; height: auto;">
+                        <option value="K1">K1 (สาขา 11)</option>
+                        <option value="K2">K2 (สาขา 21)</option>
+                        <option value="K3">K3 (สาขา 31)</option>
+                        <option value="K4">K4 (สาขา 41)</option>
+                        <option value="K5">K5 (สาขา 51)</option>
+                        <option value="SP">SP (คลังสินค้า 00)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label class="path-label" style="margin-bottom: 8px;">🔍 ค้นหาบิล (เดือน - ท้ายบิล)</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3"
+                            autocomplete="off">
+                        <span class="search-icon">🔍</span>
+                        <div class="autocomplete-dropdown" id="billDropdown"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="save-btn" id="runBillBtn"
+                style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 0; display: block;">🚀
+                เริ่มประมวลผลบิล</button>
+
+            <div class="status-message" id="billStatusMessage" style="border-left-color: #9b59b6;">
+                <span class="status-icon" id="billStatusIcon">⏳</span>
+                <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
+            </div>
+
+            <div class="branch-group" id="billResultCard"
+                style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7; max-height: 280px; overflow-y: auto;">
+                <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
+                <div id="billResultContent"
+                    style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT SECTION: Directory Settings & Logs -->
+        <div class="right-section">
+            <h2>⚙️ ตั้งค่าโฟลเดอร์ & เส้นทางประมวลผล</h2>
+
+            <div class="branch-paths">
+                <!-- Search Paths (part_a, part_b) -->
+                <div class="branch-group" style="border-left-color: #3498db;">
+                    <h3>🔎 โฟลเดอร์ค้นหาไฟล์ Excel</h3>
+
+                    <div class="path-input-group">
+                        <label class="path-label">📂 part_a (Google Drive KMART ใช้งาน)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="partAInput" class="path-input"
+                                placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
+                            <button class="browse-btn" id="browsePartABtn"
+                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                        </div>
+                    </div>
+
+                    <div class="path-input-group">
+                        <label class="path-label">📂 part_b (Google Drive SP)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="partBInput" class="path-input" placeholder="เลือกโฟลเดอร์ SP">
+                            <button class="browse-btn" id="browsePartBBtn"
+                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Paths per branch -->
+                <div class="branch-group" style="border-left-color: #9b59b6;">
+                    <h3>💾 โฟลเดอร์ปลายทางเซฟไฟล์ .txt (แยกตามสาขา)</h3>
+                    <div class="save-paths-grid">
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K1 (สาขา 11)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK1" placeholder="C:\Users\...\K mart 1\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK1">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K2 (สาขา 21)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK2" placeholder="C:\Users\...\K mart 2\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK2">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K3 (สาขา 31)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK3" placeholder="C:\Users\...\K mart 3\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK3">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K4 (สาขา 41)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK4" placeholder="C:\Users\...\K mart 4\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK4">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 K5 (สาขา 51)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathK5" placeholder="C:\Users\...\K mart 5\เดือน 05">
+                                <button class="sp-browse-btn" data-save-target="savePathK5">📂</button>
+                            </div>
+                        </div>
+                        <div class="save-path-item">
+                            <div class="sp-label">📁 SP (คลังสินค้า 00)</div>
+                            <div class="sp-input-row">
+                                <input type="text" id="savePathSP" placeholder="C:\Users\...\Desktop">
+                                <button class="sp-browse-btn" data-save-target="savePathSP">📂</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ปุ่มบันทึกการตั้งค่าทั้งหมดสำหรับหน้าที่สอง -->
+                <button class="save-btn" id="saveBillPathsBtn"
+                    style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾
+                    บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PREVIEW MODAL ==================== -->
+    <div class="modal" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 สรุปข้อมูลไฟล์ก่อนประมวลผล</h2>
+                <button class="modal-close" onclick="closePreviewModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="preview-item">
+                    <label>📄 ชื่อไฟล์:</label>
+                    <span id="previewFileName">-</span>
+                </div>
+
+                <div class="preview-item">
+                    <label>📊 จำนวนแถวทั้งหมด:</label>
+                    <span id="previewTotalRows">-</span> บรรทัด
+                </div>
+
+                <div class="preview-item">
+                    <label>🏢 สาขา:</label>
+                    <span id="previewBranch">-</span> (รหัส: <span id="previewBranchCode">-</span>)
+                </div>
+
+                <div class="preview-split">
+                    <div class="preview-item-half">
+                        <label>🛍️ หน้าร้าน (SP):</label>
+                        <span class="count" id="previewSPCount">0</span>
+                    </div>
+                    <div class="preview-item-half">
+                        <label>📦 โกดัง (WH):</label>
+                        <span class="count" id="previewWHCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closePreviewModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="confirmProcess()">✅ ยืนยันและประมวลผล</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== WARNING MODAL ==================== -->
+    <div class="modal" id="warningModal">
+        <div class="modal-content" style="border-top: 5px solid #f39c12; max-width: 650px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">
+                <h2>⚠️ คำเตือน: ข้อมูลไม่ตรงกัน</h2>
+                <button class="modal-close" onclick="closeWarningModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;" id="warningModalMessage">
+                    พบข้อมูลในคอลัมน์ เบิก และ รับ (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:
+                </p>
+                <div class="warning-table-container">
+                    <table class="warning-table">
+                        <thead>
+                            <tr>
+                                <th>รหัสสินค้า</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>รายการเบิก</th>
+                                <th>รายการรับ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="warningTableBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeWarningModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="continueToPreview()"
+                    style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RECEIVE PIECE WARNING MODAL ==================== -->
+    <div class="modal" id="receiveWarningModal">
+        <div class="modal-content" style="border-top: 5px solid #e67e22; max-width: 650px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">
+                <h2>⚠️ คำเตือน: ข้อมูล RECEIVE_PIECE ไม่สมบูรณ์</h2>
+                <button class="modal-close" onclick="closeReceiveWarningModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;">
+                    พบข้อมูล RECEIVE_PIECE > 0 แต่ RE_SKU_CODE เป็นค่าว่าง กรุณาตรวจสอบ:
+                </p>
+                <div class="warning-table-container">
+                    <table class="warning-table">
+                        <thead>
+                            <tr>
+                                <th>แถวที่</th>
+                                <th>ชื่อสินค้า</th>
+                                <th>RECEIVE_PIECE</th>
+                                <th>RE_SKU_CODE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiveWarningTableBody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeReceiveWarningModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="continueFromReceiveToPreview()"
+                    style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ERROR MODAL ==================== -->
+    <div class="modal" id="errorModal">
+        <div class="modal-content" style="border-top: 5px solid #e74c3c;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <h2>⚠️ พบข้อผิดพลาด</h2>
+                <button class="modal-close" onclick="closeErrorModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div style="color: #c0392b; font-size: 15px; font-weight: 500; white-space: pre-wrap;"
+                    id="errorModalMessage">
+                    -
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeErrorModal()">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/eel.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Sync branch name to summary when summary is shown
+        const summaryObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'style' || mutation.attributeName === 'class') {
+                    const branchName = document.getElementById('branchName').innerText;
+                    const summaryBranchName = document.getElementById('summaryBranchName');
+                    if (summaryBranchName) {
+                        summaryBranchName.innerText = branchName;
+                    }
+                }
+            });
+        });
+
+        const summaryDisplayEl = document.getElementById('fileSummaryDisplay');
+        if (summaryDisplayEl) {
+            summaryObserver.observe(summaryDisplayEl, { attributes: true });
+        }
+    </script>
+</body>
+
+</html>

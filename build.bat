@@ -49,7 +49,7 @@ echo ===============================================
 echo  ✅ Build Complete!
 echo ===============================================
 echo.
-echo 📁 Output: dist\ExcelProcessor.exe
+echo 📁 Output: dist\ExcelProcessor\ExcelProcessor.exe
 echo.
 echo Next steps:
 echo   1. Go to dist folder
@@ -95,8 +95,8 @@ echo  Installing Existing Application
 echo ===============================================
 echo.
 
-if not exist "dist\ExcelProcessor.exe" (
-    echo ❌ Error: dist\ExcelProcessor.exe not found
+if not exist "dist\ExcelProcessor\ExcelProcessor.exe" (
+    echo ❌ Error: dist\ExcelProcessor\ExcelProcessor.exe not found
     echo Please build the .exe first using option 1 or 2
     echo.
     pause
@@ -171,16 +171,15 @@ echo.
 echo - Cleaning old build files...
 if exist "dist" rmdir /s /q dist
 if exist "build" rmdir /s /q build
-if exist "ExcelProcessor.spec" del ExcelProcessor.spec
 if exist "__pycache__" rmdir /s /q __pycache__
 
 echo.
-echo - Creating executable...
+echo - Creating executable (onedir mode for fast startup)...
 echo.
 
 %PYTHON_CMD% -m PyInstaller ^
     --name "ExcelProcessor" ^
-    --onefile ^
+    --onedir ^
     --windowed ^
     --add-data "web;web" ^
     --hidden-import=pandas ^
@@ -188,6 +187,12 @@ echo.
     --hidden-import=openpyxl ^
     --hidden-import=eel ^
     --collect-all=eel ^
+    --exclude-module=matplotlib ^
+    --exclude-module=scipy ^
+    --exclude-module=PIL ^
+    --exclude-module=pytest ^
+    --exclude-module=IPython ^
+    --exclude-module=jupyter ^
     main.py
 
 if %ERRORLEVEL% NEQ 0 (
@@ -198,7 +203,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo.
-echo ✅ Executable created successfully
+echo ✅ Executable created successfully (dist\ExcelProcessor\ExcelProcessor.exe)
 exit /b 0
 
 REM ===============================================
@@ -206,8 +211,8 @@ REM SUBROUTINE: INSTALL_APP
 REM ===============================================
 :INSTALL_APP
 
-if not exist "dist\ExcelProcessor.exe" (
-    echo ❌ Error: dist\ExcelProcessor.exe not found
+if not exist "dist\ExcelProcessor\ExcelProcessor.exe" (
+    echo ❌ Error: dist\ExcelProcessor\ExcelProcessor.exe not found
     exit /b 1
 )
 
@@ -230,8 +235,8 @@ echo.
 echo - Creating installation directory...
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
-echo - Copying files...
-copy "dist\ExcelProcessor.exe" "%INSTALL_DIR%\" >nul 2>&1
+echo - Copying files (onedir bundle)...
+xcopy /E /I /Y "dist\ExcelProcessor" "%INSTALL_DIR%" >nul 2>&1
 if exist "config.py" copy "config.py" "%INSTALL_DIR%\" >nul 2>&1
 
 echo - Creating Start Menu shortcut...
@@ -268,8 +273,8 @@ REM SUBROUTINE: UPDATE_APP
 REM ===============================================
 :UPDATE_APP
 
-if not exist "dist\ExcelProcessor.exe" (
-    echo ❌ Error: dist\ExcelProcessor.exe not found
+if not exist "dist\ExcelProcessor\ExcelProcessor.exe" (
+    echo ❌ Error: dist\ExcelProcessor\ExcelProcessor.exe not found
     exit /b 1
 )
 
@@ -299,7 +304,7 @@ if exist "%INSTALL_DIR%\ExcelProcessor.exe" (
 )
 
 echo - Installing new version...
-copy "dist\ExcelProcessor.exe" "%INSTALL_DIR%\ExcelProcessor.exe" >nul 2>&1
+xcopy /E /I /Y "dist\ExcelProcessor" "%INSTALL_DIR%" >nul 2>&1
 
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ Update failed - restoring backup...
