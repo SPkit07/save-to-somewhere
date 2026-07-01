@@ -715,6 +715,115 @@
             color: #e74c3c;
         }
 
+        /* EXE Selector Styles */
+        .exe-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 12px;
+            border-left: 1px solid #e2e8f0;
+            padding-left: 12px;
+        }
+
+        .exe-select {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 12px;
+            background-color: white;
+            color: #2c3e50;
+            cursor: pointer;
+            max-width: 200px;
+            transition: all 0.2s;
+        }
+
+        .exe-select:hover {
+            border-color: #3498db;
+            background-color: #f0f8ff;
+        }
+
+        .exe-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .refresh-exe-btn {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .refresh-exe-btn:hover {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* Custom Path Input Styles */
+        .custom-path-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 12px;
+            border-left: 1px solid #e2e8f0;
+            padding-left: 12px;
+        }
+
+        .custom-path-input {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 12px;
+            width: 250px;
+            transition: all 0.2s;
+        }
+
+        .custom-path-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .browse-exe-btn {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .browse-exe-btn:hover {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* Responsive layout for status toggle */
+        @media (max-width: 1400px) {
+            .status-toggle-container {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .exe-selector-container,
+            .custom-path-container {
+                margin-left: 0;
+                border-left: none;
+                padding-left: 0;
+            }
+
+            .custom-path-input {
+                width: 180px;
+            }
+        }
+
         /* Fullscreen Overlay for shutdown */
         .shutdown-overlay {
             display: none;
@@ -1002,6 +1111,20 @@
                 <span class="slider round"></span>
             </label>
             <span class="status-state-text" id="statusStateText">เปิดทำงาน (ON)</span>
+            
+            <!-- Recent EXE Files Dropdown -->
+            <div class="exe-selector-container">
+                <select id="recentExeSelect" class="exe-select">
+                    <option value="">-- เลือกไฟล์ .exe ล่าสุด --</option>
+                </select>
+                <button class="refresh-exe-btn" id="refreshExeBtn" title="รีเฟรชรายการ .exe">🔄</button>
+            </div>
+            
+            <!-- Custom Path Input -->
+            <div class="custom-path-container">
+                <input type="text" id="customExePath" class="custom-path-input" placeholder="หรือป้อน path ของไฟล์ .exe" title="ป้อน path เต็มของไฟล์ .exe เช่น C:\path\to\program.exe">
+                <button class="browse-exe-btn" id="browseExeBtn" title="เรียกดู">📁</button>
+            </div>
         </div>
     </div>
 

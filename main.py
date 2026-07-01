@@ -310,6 +310,34 @@ def select_file_dialog() -> str:
 
 
 @eel.expose
+def select_exe_file_dialog() -> str:
+    """
+    เปิด File Dialog ให้ User เลือกไฟล์ .exe
+    (ใช้ tkinter)
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        
+        root = tk.Tk()
+        root.withdraw()  # ซ่อนหน้าต่างหลัก
+        root.attributes('-topmost', True)  # ให้ dialog อยู่บน
+        
+        file_path = filedialog.askopenfilename(
+            title="เลือกไฟล์โปรแกรม (.exe)",
+            filetypes=[("Executable files", "*.exe"), ("All files", "*.*")]
+        )
+        
+        root.destroy()
+        logger.info(f"Exe file selected: {file_path if file_path else 'Cancelled'}")
+        return file_path if file_path else ""
+    
+    except Exception as e:
+        logger.error(f"Error in exe file dialog: {e}", exc_info=True)
+        return ""
+
+
+@eel.expose
 def select_directory_dialog() -> str:
     """
     เปิด Directory Dialog ให้ User เลือกโฟลเดอร์
@@ -480,6 +508,61 @@ def open_folder_in_explorer(folder_path: str) -> bool:
         return False
 
 
+def _launch_executable(exe_path: str, *args: str) -> bool:
+    """Launch an executable as a detached child process to avoid duplicate windows."""
+    import subprocess
+
+    try:
+        if not exe_path or not os.path.exists(exe_path):
+            logger.error(f"❌ Executable not found: {exe_path}")
+            return False
+
+        command = [exe_path]
+        if args:
+            command.extend(args)
+
+        creationflags = 0
+        if sys.platform == 'win32':
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+
+        subprocess.Popen(
+            command,
+            close_fds=True,
+            cwd=os.path.dirname(exe_path) if os.path.dirname(exe_path) else None,
+            creationflags=creationflags,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        logger.info(f"✅ Launched detached process: {exe_path}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error launching executable: {e}", exc_info=True)
+        return False
+
+
+@eel.expose
+def launch_excel_processor() -> bool:
+    """เปิดโปรแกรม ExcelProcessor.exe"""
+    try:
+        # Try dist version first, then build version
+        exe_paths = [
+            os.path.join(os.path.dirname(__file__), 'dist', 'ExcelProcessor', 'ExcelProcessor.exe'),
+            os.path.join(os.path.dirname(__file__), 'build', 'ExcelProcessor', 'ExcelProcessor.exe'),
+        ]
+        
+        for path in exe_paths:
+            if os.path.exists(path):
+                return _launch_executable(path)
+        
+        logger.error("❌ ExcelProcessor.exe not found in dist or build directories")
+        return False
+        
+    except Exception as e:
+        logger.error(f"❌ Error launching ExcelProcessor: {e}")
+        return False
+
+
 @eel.expose
 def terminate_program() -> None:
     """ปิดโปรแกรมทันทีเพื่อคลายไฟล์ล็อกทั้งหมด"""
@@ -488,6 +571,194 @@ def terminate_program() -> None:
     import time
     time.sleep(0.2)
     raise SystemExit(0)
+
+
+@eel.expose
+def restart_application() -> None:
+    """
+    รีสตาร์ทโปรแกรมโดยปิดหน้าต่างปัจจุบันและเปิดใหม่
+    ใช้ subprocess เพื่อเปิดไฟล์ exe ใหม่
+    """
+    try:
+        logger.info("🔄 Restarting application...")
+        
+        exe_path = None
+        saved_exe_path = get_saved_exe_path()
+        if saved_exe_path and os.path.exists(saved_exe_path):
+            exe_path = saved_exe_path
+            logger.info(f"🔁 Using saved exe path for restart: {exe_path}")
+        elif getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+        else:
+            search_paths = [
+                os.path.join(os.path.dirname(__file__), 'dist', 'ExcelProcessor', 'ExcelProcessor.exe'),
+                os.path.join(os.path.dirname(__file__), 'build', 'ExcelProcessor', 'ExcelProcessor.exe'),
+            ]
+            for path in search_paths:
+                if os.path.exists(path):
+                    exe_path = path
+                    break
+            
+            if not exe_path:
+                exe_path = os.path.abspath(__file__)
+                if not exe_path.lower().endswith('.exe'):
+                    logger.info(f"Restarting as Python script: {exe_path}")
+                    if _launch_executable(sys.executable, exe_path):
+                        os._exit(0)
+                    raise SystemExit(1)
+        
+        if exe_path and os.path.exists(exe_path):
+            logger.info(f"✅ Restarting from: {exe_path}")
+            # Ask frontend to close its browser window (if available) before launching replacement
+            try:
+                if 'eel' in globals() and hasattr(eel, '_closeWindowFromPython'):
+                    try:
+                        eel._closeWindowFromPython()(lambda: logger.info('Requested frontend to close'))
+                    except Exception:
+                        # Some eel versions map JS functions directly as attributes
+                        try:
+                            eel._closeWindowFromPython()
+                        except Exception:
+                            logger.debug('Could not call _closeWindowFromPython from Python')
+            except Exception:
+                logger.debug('No frontend close function available')
+
+            if not _launch_executable(exe_path):
+                logger.error("Cannot start replacement process")
+                raise SystemExit(1)
+        else:
+            logger.error("Cannot find executable to restart")
+            raise SystemExit(1)
+        
+        os._exit(0)
+        
+    except Exception as e:
+        logger.error(f"❌ Error restarting application: {e}", exc_info=True)
+        raise SystemExit(1)
+
+
+@eel.expose
+def get_recent_exe_files() -> list:
+    """
+    ค้นหาไฟล์ .exe ที่ใหม่ล่าสุดในโฟลเดอร์ปัจจุบัน dist และ build
+    รีเทิร์นรายการ .exe พร้อมข้อมูล (path, name, modified_time)
+    """
+    import glob
+    import os
+    
+    exe_list = []
+    search_dirs = [
+        os.path.dirname(__file__),  # Current directory
+        os.path.join(os.path.dirname(__file__), 'dist'),
+        os.path.join(os.path.dirname(__file__), 'build'),
+        os.path.join(os.path.dirname(__file__), 'dist', 'ExcelProcessor'),
+        os.path.join(os.path.dirname(__file__), 'build', 'ExcelProcessor'),
+    ]
+    
+    try:
+        found_files = {}  # dict เพื่อเก็บไฟล์ unique และเลือกเก่าสุด
+        
+        for search_dir in search_dirs:
+            if not os.path.isdir(search_dir):
+                continue
+            
+            # ค้นหา .exe ไฟล์ในโฟลเดอร์
+            for exe_file in glob.glob(os.path.join(search_dir, '*.exe')):
+                try:
+                    file_name = os.path.basename(exe_file)
+                    file_size = os.path.getsize(exe_file)
+                    mod_time = os.path.getmtime(exe_file)
+                    
+                    # เก็บเฉพาะไฟล์ที่มีขนาดใหญ่ (ข้ามไฟล์ installer/uninstaller ขนาดเล็ก)
+                    if file_size > 1000000:  # 1MB
+                        key = file_name.lower()
+                        if key not in found_files or found_files[key]['mod_time'] < mod_time:
+                            found_files[key] = {
+                                'path': exe_file,
+                                'name': file_name,
+                                'mod_time': mod_time,
+                                'size': file_size
+                            }
+                except Exception as e:
+                    logger.warning(f"Error processing exe file {exe_file}: {e}")
+        
+        # เรียงลำดับตามเวลาแก้ไข (ใหม่สุดก่อน)
+        exe_list = sorted(found_files.values(), key=lambda x: x['mod_time'], reverse=True)
+        
+        # จัดรูปแบบสำหรับ frontend
+        result = [{
+            'path': item['path'],
+            'name': item['name'],
+            'modified_time': item['mod_time'],
+            'size_mb': round(item['size'] / 1024 / 1024, 2)
+        } for item in exe_list]
+        
+        logger.info(f"✅ Found {len(result)} .exe files")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Error scanning for .exe files: {e}")
+        return []
+
+
+@eel.expose
+def launch_excel_processor_from_path(exe_path: str) -> bool:
+    """
+    เปิดโปรแกรม ExcelProcessor.exe จากเส้นทางที่กำหนด
+    
+    Args:
+        exe_path: Path to the .exe file
+    
+    Returns:
+        True if launched successfully, False otherwise
+    """
+    try:
+        if not exe_path or not os.path.exists(exe_path):
+            logger.error(f"❌ Executable not found: {exe_path}")
+            return False
+        
+        if not exe_path.lower().endswith('.exe'):
+            logger.error(f"❌ File is not an executable: {exe_path}")
+            return False
+        
+        save_selected_exe_path(exe_path)
+        success = _launch_executable(exe_path)
+        if success:
+            logger.info(f"✅ Launched executable from custom path: {exe_path}")
+        return success
+        
+    except Exception as e:
+        logger.error(f"❌ Error launching executable from {exe_path}: {e}")
+        return False
+
+
+@eel.expose
+def get_saved_exe_path() -> str:
+    """Get the last selected .exe path from config."""
+    try:
+        config = load_paths_config()
+        saved_path = config.get("selected_exe_path") or config.get("exe_path") or ""
+        if saved_path and os.path.exists(saved_path):
+            return saved_path
+        return ""
+    except Exception as e:
+        logger.warning(f"Error reading saved exe path: {e}")
+        return ""
+
+
+@eel.expose
+def save_selected_exe_path(exe_path: str) -> bool:
+    """Persist the selected .exe path so restart can reuse it."""
+    try:
+        if not exe_path:
+            return False
+
+        config = load_paths_config()
+        config["selected_exe_path"] = exe_path
+        return save_paths_config(config)
+    except Exception as e:
+        logger.warning(f"Error saving selected exe path: {e}")
+        return False
 
 
 @eel.expose

@@ -1200,24 +1200,97 @@ function showBillStatus(message, type = 'loading') {
     }
 }
 
-// ==================== PROGRAM STATUS TOGGLE (OFFLINE SIMULATION) ====================
+// Expose a JS function to Python so Python can request the frontend to close its window
+function _closeWindowFromPython() {
+    try {
+        window.close();
+    } catch (e) {
+        console.warn('Unable to close window from Python:', e);
+    }
+}
+if (typeof eel !== 'undefined' && eel.expose) {
+    try {
+        eel.expose(_closeWindowFromPython);
+    } catch (e) {
+        console.warn('Failed to expose _closeWindowFromPython to Python:', e);
+    }
+}
+
+// ==================== PROGRAM STATUS TOGGLE WITH EXE SELECTION ====================
 function setupProgramStatusToggle() {
     const toggle = document.getElementById('programStatusToggle');
     const stateText = document.getElementById('statusStateText');
     const overlay = document.getElementById('shutdownOverlay');
+    const recentExeSelect = document.getElementById('recentExeSelect');
+    const refreshExeBtn = document.getElementById('refreshExeBtn');
+    const customExePath = document.getElementById('customExePath');
+    const browseExeBtn = document.getElementById('browseExeBtn');
 
     if (!toggle || !stateText) return;
 
-    const requestProgramShutdown = () => {
+    async function saveSelectedExePath(path) {
+        if (typeof eel !== 'undefined' && eel.save_selected_exe_path) {
+            try {
+                await new Promise((resolve) => {
+                    eel.save_selected_exe_path(path)(function(success) {
+                        resolve(success);
+                    });
+                });
+            } catch (error) {
+                console.error('Error saving selected exe path:', error);
+            }
+        }
+    }
+
+    async function loadSavedExePath() {
+        if (typeof eel === 'undefined' || !eel.get_saved_exe_path) return;
+
+        try {
+            const savedPath = await new Promise((resolve) => {
+                eel.get_saved_exe_path()(function(result) {
+                    resolve(result);
+                });
+            });
+
+            if (savedPath && recentExeSelect) {
+                const matchingOption = Array.from(recentExeSelect.options).find((option) => option.value === savedPath);
+                if (matchingOption) {
+                    recentExeSelect.value = savedPath;
+                    if (customExePath) {
+                        customExePath.value = '';
+                    }
+                } else if (customExePath) {
+                    customExePath.value = savedPath;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading saved exe path:', error);
+        }
+    }
+
+    // Load recent exe files on startup
+    const initializeExeSelection = async () => {
+        await loadRecentExeFiles();
+        await loadSavedExePath();
+    };
+    initializeExeSelection();
+
+    const requestProgramRestart = () => {
         if (overlay) {
             overlay.style.display = 'flex';
         }
 
-        if (typeof eel !== 'undefined' && eel.terminate_program) {
+        // Show restart message
+        const shutdownText = overlay?.querySelector('div');
+        if (shutdownText) {
+            shutdownText.textContent = "🔄 กำลังรีสตาร์ทโปรแกรม...";
+        }
+
+        if (typeof eel !== 'undefined' && eel.restart_application) {
             try {
-                eel.terminate_program()(function() {});
+                eel.restart_application()(function() {});
             } catch (error) {
-                console.error('Failed to terminate program:', error);
+                console.error('Failed to restart program:', error);
             }
         } else {
             try {
@@ -1228,9 +1301,115 @@ function setupProgramStatusToggle() {
         }
     };
 
+    const launchExcelProcessor = () => {
+        if (typeof eel !== 'undefined' && eel.launch_excel_processor) {
+            try {
+                eel.launch_excel_processor()(function(success) {
+                    if (success) {
+                        console.log('✅ ExcelProcessor launched successfully');
+                    } else {
+                        console.error('❌ Failed to launch ExcelProcessor');
+                        // Keep toggle ON even if launch failed
+                    }
+                });
+            } catch (error) {
+                console.error('Error calling launch_excel_processor:', error);
+            }
+        }
+    };
+
+    const launchExcelProcessorFromPath = (exePath) => {
+        if (!exePath) {
+            console.error('❌ No exe path provided');
+            return;
+        }
+
+        if (typeof eel !== 'undefined' && eel.launch_excel_processor_from_path) {
+            try {
+                saveSelectedExePath(exePath);
+                eel.launch_excel_processor_from_path(exePath)(function(success) {
+                    if (success) {
+                        console.log(`✅ Program launched from: ${exePath}`);
+                    } else {
+                        console.error(`❌ Failed to launch from: ${exePath}`);
+                        alert('ไม่สามารถเปิดไฟล์ .exe ได้ โปรดตรวจสอบเส้นทาง');
+                    }
+                });
+            } catch (error) {
+                console.error('Error calling launch_excel_processor_from_path:', error);
+                alert('เกิดข้อผิดพลาดในการเปิดไฟล์ .exe');
+            }
+        }
+    };
+
+    // Load recent exe files from backend
+    async function loadRecentExeFiles() {
+        if (typeof eel === 'undefined' || !eel.get_recent_exe_files) return;
+
+        try {
+            const exeList = await new Promise((resolve) => {
+                eel.get_recent_exe_files()(function(result) {
+                    resolve(result);
+                });
+            });
+
+            // Clear existing options (except first)
+            while (recentExeSelect.options.length > 1) {
+                recentExeSelect.remove(1);
+            }
+
+            // Add exe files to dropdown
+            if (exeList && exeList.length > 0) {
+                exeList.forEach((exe, index) => {
+                    const option = document.createElement('option');
+                    option.value = exe.path;
+                    option.textContent = `${exe.name} (${exe.size_mb}MB)`;
+                    recentExeSelect.appendChild(option);
+                });
+                console.log(`✅ Loaded ${exeList.length} recent exe files`);
+            } else {
+                console.log('ℹ️ No recent exe files found');
+            }
+        } catch (error) {
+            console.error('Error loading recent exe files:', error);
+        }
+    }
+
+    // Refresh exe files
+    if (refreshExeBtn) {
+        refreshExeBtn.addEventListener('click', () => {
+            console.log('🔄 Refreshing exe files...');
+            loadRecentExeFiles();
+        });
+    }
+
+    // Browse for exe file
+    if (browseExeBtn) {
+        browseExeBtn.addEventListener('click', () => {
+            if (typeof eel !== 'undefined' && eel.select_exe_file_dialog) {
+                try {
+                    eel.select_exe_file_dialog()(function(filePath) {
+                        if (filePath && filePath.toLowerCase().endsWith('.exe')) {
+                            customExePath.value = filePath;
+                            if (recentExeSelect) {
+                                recentExeSelect.value = '';
+                            }
+                            saveSelectedExePath(filePath);
+                            console.log(`✅ Selected exe: ${filePath}`);
+                        } else if (filePath) {
+                            alert('โปรดเลือกไฟล์ .exe เท่านั้น');
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error opening exe file dialog:', error);
+                }
+            }
+        });
+    }
+
     toggle.addEventListener('change', function() {
         if (!this.checked) {
-            // User switched OFF -> shut down the desktop app cleanly
+            // User switched OFF -> restart the application
             stateText.textContent = "ปิดทำงาน (OFF)";
             stateText.classList.add('off');
 
@@ -1238,9 +1417,9 @@ function setupProgramStatusToggle() {
                 overlay.style.display = 'flex';
             }
 
-            setTimeout(requestProgramShutdown, 180);
+            setTimeout(requestProgramRestart, 180);
         } else {
-            // User switched ON
+            // User switched ON -> application is restarting fresh, so just show it's running
             stateText.textContent = "เปิดทำงาน (ON)";
             stateText.classList.remove('off');
 
@@ -1248,6 +1427,28 @@ function setupProgramStatusToggle() {
             if (overlay) {
                 overlay.style.display = 'none';
             }
+
+            console.log('✅ Application restarted and running');
         }
     });
+
+    // Listen for exe selection change to clear custom path
+    if (recentExeSelect) {
+        recentExeSelect.addEventListener('change', () => {
+            if (recentExeSelect.value && customExePath) {
+                customExePath.value = '';
+            }
+            saveSelectedExePath(recentExeSelect.value || '');
+        });
+    }
+
+    // Listen for custom path input to clear exe selection
+    if (customExePath) {
+        customExePath.addEventListener('input', () => {
+            if (customExePath.value && recentExeSelect) {
+                recentExeSelect.value = '';
+            }
+            saveSelectedExePath(customExePath.value || '');
+        });
+    }
 }
