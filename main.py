@@ -481,6 +481,59 @@ def save_paths_config(paths: Dict) -> bool:
 
 
 @eel.expose
+def load_custom_names_config() -> Dict:
+    """Load custom names config from file"""
+    config_path = os.path.join(get_app_config_dir(), "custom_names_config.json")
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading custom names config from {config_path}: {e}")
+    return {}
+
+
+@eel.expose
+def save_custom_names_config(config: Dict) -> bool:
+    """Save custom names config to file"""
+    config_path = os.path.join(get_app_config_dir(), "custom_names_config.json")
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving custom names config to {config_path}: {e}")
+        return False
+
+
+@eel.expose
+def load_custom_scripts() -> list:
+    """Load custom scripts from file"""
+    config_path = os.path.join(get_app_config_dir(), "custom_scripts.json")
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading custom scripts from {config_path}: {e}")
+    return []
+
+
+@eel.expose
+def save_custom_scripts(scripts: list) -> bool:
+    """Save custom scripts to file"""
+    config_path = os.path.join(get_app_config_dir(), "custom_scripts.json")
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(scripts, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving custom scripts to {config_path}: {e}")
+        return False
+
+
+
+@eel.expose
 def check_directory_exists(directory_path: str) -> bool:
     """ตรวจสอบว่า directory มีอยู่และสามารถเข้าถึงได้"""
     try:

@@ -165,6 +165,14 @@ if not exist "web" (
     echo ❌ Error: web directory not found!
     exit /b 1
 )
+if not exist "web\index.html" (
+    echo ❌ Error: web\index.html not found!
+    exit /b 1
+)
+if not exist "web\code-data.js" (
+    echo ❌ Error: web\code-data.js not found!
+    exit /b 1
+)
 echo ✅ UI files ready
 
 echo.
@@ -178,6 +186,8 @@ echo - Creating executable (onedir mode for fast startup)...
 echo.
 
 %PYTHON_CMD% -m PyInstaller ^
+    --clean ^
+    --noconfirm ^
     --name "ExcelProcessor" ^
     --onedir ^
     --windowed ^
@@ -202,6 +212,15 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
+if exist "dist\ExcelProcessor\_internal\web" (
+    echo.
+    echo - Refreshing bundled web assets...
+    xcopy /E /I /Y "web" "dist\ExcelProcessor\_internal\web\" >nul 2>&1
+)
+if exist "dist\ExcelProcessor\web" (
+    xcopy /E /I /Y "web" "dist\ExcelProcessor\web\" >nul 2>&1
+)
+
 echo.
 echo ✅ Executable created successfully (dist\ExcelProcessor\ExcelProcessor.exe)
 exit /b 0
@@ -216,20 +235,22 @@ if not exist "dist\ExcelProcessor\ExcelProcessor.exe" (
     exit /b 1
 )
 
-REM สร้างโฟลเดอร์ Program Files
+REM เลือกโฟลเดอร์ติดตั้งตามสิทธิ์ของผู้ใช้
 set INSTALL_DIR=%ProgramFiles%\ExcelProcessor
-echo Installing to: %INSTALL_DIR%
 
 REM ตรวจสอบ administrative privileges
 net session >nul 2>&1
 if %errorLevel% NEQ 0 (
+    set INSTALL_DIR=%LOCALAPPDATA%\ExcelProcessor
     echo.
-    echo ⚠️  This installation requires Administrator privileges
-    echo Please run as Administrator
+    echo ⚠️  Running without Administrator privileges
+    echo Using user-level install directory: %INSTALL_DIR%
     echo.
-    pause
-    exit /b 1
+) else (
+    echo Installing to: %INSTALL_DIR%
 )
+
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
 echo.
 echo - Creating installation directory...
@@ -279,22 +300,25 @@ if not exist "dist\ExcelProcessor\ExcelProcessor.exe" (
 )
 
 set INSTALL_DIR=%ProgramFiles%\ExcelProcessor
+net session >nul 2>&1
+if %errorLevel% NEQ 0 (
+    set INSTALL_DIR=%LOCALAPPDATA%\ExcelProcessor
+)
 
 if not exist "%INSTALL_DIR%" (
-    echo ❌ Error: Excel Processor is not installed
-    echo Please use option 2 to install first
-    exit /b 1
+    echo ⚠️ Excel Processor is not installed yet
+    echo Performing a fresh installation instead...
+    call :INSTALL_APP
+    exit /b %ERRORLEVEL%
 )
 
 echo - Checking for Administrator privileges...
 net session >nul 2>&1
 if %errorLevel% NEQ 0 (
     echo.
-    echo ⚠️  This update requires Administrator privileges
-    echo Please run as Administrator
+    echo ⚠️  This update will use the user-level install directory
+    echo Updating: %INSTALL_DIR%
     echo.
-    pause
-    exit /b 1
 )
 
 echo - Backing up old version...

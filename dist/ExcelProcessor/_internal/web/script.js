@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadBillFormFromBackend();
     setupBillFormEventListeners();
     
+    // Page 3 (Code snippets) Initializations
+    try { await initCodeTab(); } catch (e) { console.warn('Code tab init failed', e); }
+
     // Program ON/OFF Switch
     setupProgramStatusToggle();
 });
@@ -736,12 +739,12 @@ function switchTab(tabName) {
     }
     
     // Set active button
-    let activeBtn;
-    if (tabName === 'processor') {
-        activeBtn = document.getElementById('tabBtnProcessor');
-    } else {
-        activeBtn = document.getElementById('tabBtnBillProcessor');
-    }
+    const tabBtnMap = {
+        'processor': 'tabBtnProcessor',
+        'bill-processor': 'tabBtnBillProcessor',
+        'code': 'tabBtnCode'
+    };
+    const activeBtn = document.getElementById(tabBtnMap[tabName]);
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
@@ -1450,5 +1453,549 @@ function setupProgramStatusToggle() {
             }
             saveSelectedExePath(customExePath.value || '');
         });
+    }
+}
+
+// ==================== PAGE 3: CODE SNIPPETS TAB ====================
+async function initCodeTab() {
+    const codeList = document.getElementById('codeList');
+    if (!codeList) return;
+    if (typeof CODE_TEXT === 'undefined' || !CODE_TEXT) {
+        codeList.innerHTML = '<div style="color:#e74c3c;">ไม่พบข้อมูลโค้ด (CODE_TEXT)</div>';
+        return;
+    }
+
+    // Set up form listeners for adding custom scripts
+    setupCustomScriptListeners();
+
+    const blocks = CODE_TEXT.split(/\n\/\/[-]{2,}\n/);
+    codeList.innerHTML = '';
+    codeList.style.display = 'flex';
+    codeList.style.flexDirection = 'column';
+    codeList.style.gap = '16px';
+    codeList.style.padding = '4px 0';
+    codeList.style.width = '100%';
+    codeList.style.maxWidth = '860px';
+    codeList.style.margin = '0 auto';
+
+    // 1. Render all predefined blocks from CODE_TEXT
+    for (const blk of blocks) {
+        const trimmed = blk.trim();
+        if (!trimmed) continue;
+
+        // Extract the first comment line as the title
+        const firstLine = trimmed.split('\n')[0].trim();
+        let titleText = firstLine.replace(/^\/\/\s*/, '').trim();
+        if (!titleText) titleText = 'โค้ด';
+
+        // Check if this is the interactive last block
+        if (trimmed.includes('แก้ไขรายชื่อและชื่อสาขาที่ต้องการ')) {
+            // Render the interactive name config card
+            const card = document.createElement('div');
+            card.style.background = 'linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)';
+            card.style.border = '1px solid #dce7ff';
+            card.style.padding = '16px';
+            card.style.borderRadius = '16px';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.gap = '12px';
+            card.style.boxShadow = '0 10px 24px rgba(39, 64, 96, 0.08)';
+            card.style.width = '100%';
+
+            const titleRow = document.createElement('div');
+            titleRow.style.display = 'flex';
+            titleRow.style.justifyContent = 'center';
+            titleRow.style.alignItems = 'center';
+            titleRow.style.gap = '10px';
+            titleRow.style.textAlign = 'center';
+
+            const titleBlock = document.createElement('div');
+            titleBlock.style.display = 'flex';
+            titleBlock.style.flexDirection = 'column';
+            titleBlock.style.gap = '2px';
+
+            const title = document.createElement('div');
+            title.innerText = '⚙️ ตัวจัดการชื่อและตำแหน่ง';
+            title.style.fontWeight = '800';
+            title.style.color = '#274060';
+            title.style.fontSize = '15px';
+
+            const subtitle = document.createElement('div');
+            subtitle.innerText = 'เพิ่ม/ลบรายชื่อตามกลุ่ม SP (หน้าร้าน) หรือ WH (โกดัง)';
+            subtitle.style.fontSize = '13px';
+            subtitle.style.color = '#5f738c';
+
+            titleBlock.appendChild(title);
+            titleBlock.appendChild(subtitle);
+            titleRow.appendChild(titleBlock);
+
+            card.appendChild(titleRow);
+
+            const mappingContainer = document.createElement('div');
+            await createInteractiveNameConfigUI(mappingContainer, trimmed);
+            card.appendChild(mappingContainer);
+
+            codeList.appendChild(card);
+        } else {
+            // Render a standard code card with title + copy button
+            codeList.appendChild(createCodeCard(titleText, trimmed));
+        }
+    }
+
+    // 2. Render all custom scripts from Eel backend / localStorage
+    let customScripts = [];
+    try {
+        if (typeof eel !== 'undefined' && eel.load_custom_scripts) {
+            customScripts = await eel.load_custom_scripts()();
+        }
+    } catch (e) {
+        console.error('Failed to load custom scripts from backend:', e);
+    }
+    if (!customScripts || customScripts.length === 0) {
+        customScripts = JSON.parse(localStorage.getItem('custom_scripts') || '[]');
+    }
+
+    customScripts.forEach((script, index) => {
+        codeList.appendChild(createCustomCodeCard(script.title, script.code, index));
+    });
+}
+
+function setupCustomScriptListeners() {
+    if (window.customScriptListenersAttached) return;
+    window.customScriptListenersAttached = true;
+
+    const addBtn = document.getElementById('addCustomScriptBtn');
+    const form = document.getElementById('customScriptForm');
+    const cancelBtn = document.getElementById('cancelCustomScriptBtn');
+    const saveBtn = document.getElementById('saveCustomScriptBtn');
+    const titleInput = document.getElementById('customScriptTitle');
+    const codeInput = document.getElementById('customScriptCode');
+
+    if (!addBtn || !form || !cancelBtn || !saveBtn) return;
+
+    addBtn.addEventListener('click', () => {
+        form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+        titleInput.value = '';
+        codeInput.value = '';
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        form.style.display = 'none';
+    });
+
+    saveBtn.addEventListener('click', async () => {
+        const title = titleInput.value.trim();
+        const code = codeInput.value.trim();
+
+        if (!title || !code) {
+            alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+            return;
+        }
+
+        let customScripts = [];
+        try {
+            if (typeof eel !== 'undefined' && eel.load_custom_scripts) {
+                customScripts = await eel.load_custom_scripts()();
+            }
+        } catch (e) {
+            console.error('Failed to load custom scripts:', e);
+        }
+        if (!customScripts || customScripts.length === 0) {
+            customScripts = JSON.parse(localStorage.getItem('custom_scripts') || '[]');
+        }
+
+        customScripts.push({ title, code });
+
+        localStorage.setItem('custom_scripts', JSON.stringify(customScripts));
+        try {
+            if (typeof eel !== 'undefined' && eel.save_custom_scripts) {
+                await eel.save_custom_scripts(customScripts)();
+            }
+        } catch (e) {
+            console.error('Failed to save custom scripts:', e);
+        }
+
+        form.style.display = 'none';
+        await initCodeTab(); // Re-render tab
+    });
+}
+
+function createCodeCard(titleText, codeText) {
+    const card = document.createElement('div');
+    card.style.background = 'linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)';
+    card.style.border = '1px solid #e2e8f0';
+    card.style.padding = '12px 16px';
+    card.style.borderRadius = '12px';
+    card.style.display = 'flex';
+    card.style.justifyContent = 'space-between';
+    card.style.alignItems = 'center';
+    card.style.gap = '12px';
+    card.style.boxShadow = '0 4px 10px rgba(15, 23, 42, 0.03)';
+
+    const title = document.createElement('div');
+    title.innerText = titleText;
+    title.style.fontWeight = '700';
+    title.style.color = '#2c3e50';
+    title.style.fontSize = '14px';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.innerHTML = '📋 ก็อปปี้';
+    copyBtn.style.padding = '7px 14px';
+    copyBtn.style.border = 'none';
+    copyBtn.style.background = 'linear-gradient(90deg,#3b82f6,#2563eb)';
+    copyBtn.style.color = 'white';
+    copyBtn.style.borderRadius = '999px';
+    copyBtn.style.cursor = 'pointer';
+    copyBtn.style.fontSize = '12px';
+    copyBtn.style.fontWeight = '600';
+    copyBtn.style.whiteSpace = 'nowrap';
+
+    copyBtn.addEventListener('click', () => {
+        copyToClipboard(codeText);
+        copyBtn.innerHTML = '✓ คัดลอกแล้ว';
+        setTimeout(() => copyBtn.innerHTML = '📋 ก็อปปี้', 1400);
+    });
+
+    card.appendChild(title);
+    card.appendChild(copyBtn);
+
+    return card;
+}
+
+function createCustomCodeCard(titleText, codeText, index) {
+    const card = createCodeCard(titleText, codeText);
+    
+    // Find the copy button inside the card
+    const copyBtn = card.querySelector('button');
+    
+    const rightContainer = document.createElement('div');
+    rightContainer.style.display = 'flex';
+    rightContainer.style.gap = '8px';
+    rightContainer.style.alignItems = 'center';
+
+    // Replace the single copyBtn with a container of copy and delete buttons
+    card.removeChild(copyBtn);
+    rightContainer.appendChild(copyBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '🗑️ ลบ';
+    delBtn.style.padding = '7px 14px';
+    delBtn.style.border = 'none';
+    delBtn.style.background = '#ef4444';
+    delBtn.style.color = 'white';
+    delBtn.style.borderRadius = '999px';
+    delBtn.style.cursor = 'pointer';
+    delBtn.style.fontSize = '12px';
+    delBtn.style.fontWeight = '600';
+    delBtn.style.whiteSpace = 'nowrap';
+    delBtn.addEventListener('click', async () => {
+        if (confirm('คุณแน่ใจว่าต้องการลบสคริปต์นี้?')) {
+            let customScripts = [];
+            try {
+                if (typeof eel !== 'undefined' && eel.load_custom_scripts) {
+                    customScripts = await eel.load_custom_scripts()();
+                }
+            } catch (e) {
+                console.error('Failed to load custom scripts:', e);
+            }
+            if (!customScripts || customScripts.length === 0) {
+                customScripts = JSON.parse(localStorage.getItem('custom_scripts') || '[]');
+            }
+
+            customScripts.splice(index, 1);
+            
+            localStorage.setItem('custom_scripts', JSON.stringify(customScripts));
+            try {
+                if (typeof eel !== 'undefined' && eel.save_custom_scripts) {
+                    await eel.save_custom_scripts(customScripts)();
+                }
+            } catch (e) {
+                console.error('Failed to save custom scripts:', e);
+            }
+            await initCodeTab();
+        }
+    });
+    rightContainer.appendChild(delBtn);
+    card.appendChild(rightContainer);
+
+    // Give the card a slightly different look to indicate it is user-added
+    card.style.border = '1px solid #10b981';
+    
+    return card;
+}
+
+function createColumnUI(titleText, themeColor, entriesList, isSP) {
+    const col = document.createElement('div');
+    col.style.background = '#ffffff';
+    col.style.borderRadius = '12px';
+    col.style.padding = '16px';
+    col.style.border = `1px solid ${themeColor}22`;
+    col.style.borderTop = `4px solid ${themeColor}`;
+    col.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.03)';
+    col.style.display = 'flex';
+    col.style.flexDirection = 'column';
+    col.style.gap = '12px';
+
+    const colHeader = document.createElement('h4');
+    colHeader.innerText = titleText;
+    colHeader.style.margin = '0';
+    colHeader.style.color = '#2c3e50';
+    colHeader.style.fontSize = '14px';
+    colHeader.style.fontWeight = '700';
+    col.appendChild(colHeader);
+
+    const listContainer = document.createElement('div');
+    listContainer.style.display = 'flex';
+    listContainer.style.flexDirection = 'column';
+    listContainer.style.gap = '8px';
+    col.appendChild(listContainer);
+
+    function addNameRow(val = '') {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.alignItems = 'center';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.value = val;
+        nameInput.placeholder = 'ใส่ชื่อ...';
+        nameInput.style.flex = '1';
+        nameInput.style.padding = '8px 12px';
+        nameInput.style.border = '1px solid #cbd5e1';
+        nameInput.style.borderRadius = '6px';
+        nameInput.style.fontSize = '13px';
+        nameInput.className = isSP ? 'sp-name-input' : 'wh-name-input';
+
+        const delBtn = document.createElement('button');
+        delBtn.innerText = '✖';
+        delBtn.title = 'ลบชื่อ';
+        delBtn.style.background = 'transparent';
+        delBtn.style.border = 'none';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.color = '#ef4444';
+        delBtn.style.fontSize = '14px';
+        delBtn.style.padding = '4px 8px';
+        delBtn.addEventListener('click', () => row.remove());
+
+        row.appendChild(nameInput);
+        row.appendChild(delBtn);
+        listContainer.appendChild(row);
+    }
+
+    // populate initial list
+    entriesList.forEach(name => addNameRow(name));
+
+    const addBtn = document.createElement('button');
+    addBtn.innerText = `＋ เพิ่มชื่อ ${isSP ? 'SP' : 'WH'}`;
+    addBtn.style.background = 'transparent';
+    addBtn.style.color = themeColor;
+    addBtn.style.border = `1px dashed ${themeColor}`;
+    addBtn.style.padding = '8px';
+    addBtn.style.borderRadius = '6px';
+    addBtn.style.cursor = 'pointer';
+    addBtn.style.fontSize = '12px';
+    addBtn.style.fontWeight = '600';
+    addBtn.style.textAlign = 'center';
+    addBtn.addEventListener('click', () => addNameRow(''));
+    col.appendChild(addBtn);
+
+    return { 
+        colElement: col, 
+        getNames: () => {
+            const inputs = Array.from(listContainer.querySelectorAll(isSP ? '.sp-name-input' : '.wh-name-input'));
+            return inputs.map(i => i.value.trim()).filter(Boolean);
+        }
+    };
+}
+
+async function createInteractiveNameConfigUI(container, codeBlockText) {
+    container.innerHTML = '';
+    
+    // Check if there is saved name configuration in localStorage or Eel backend
+    let spNames = [];
+    let whNames = [];
+    let savedConfig = null;
+    
+    try {
+        if (typeof eel !== 'undefined' && eel.load_custom_names_config) {
+            const backendConfig = await eel.load_custom_names_config()();
+            if (backendConfig && (backendConfig.spNames || backendConfig.whNames)) {
+                savedConfig = JSON.stringify(backendConfig);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load custom names config from backend:', e);
+    }
+    
+    if (!savedConfig) {
+        savedConfig = localStorage.getItem('custom_names_config');
+    }
+    
+    if (savedConfig) {
+        try {
+            const parsed = JSON.parse(savedConfig);
+            spNames = parsed.spNames || [];
+            whNames = parsed.whNames || [];
+        } catch (e) {
+            console.error('Failed to parse saved name config:', e);
+        }
+    }
+    
+    // Fallback to parsed entries from CODE_TEXT if no saved configuration exists
+    if ((!spNames || spNames.length === 0) && (!whNames || whNames.length === 0)) {
+        const entries = parseNameConfigFromBlock(codeBlockText);
+        spNames = entries.filter(e => e.source === 'SP').map(e => e.name);
+        whNames = entries.filter(e => e.source !== 'SP').map(e => e.name);
+    }
+
+    // Side-by-side columns container using the .interactive-cols CSS class
+    const colsContainer = document.createElement('div');
+    colsContainer.className = 'interactive-cols';
+    colsContainer.style.marginTop = '10px';
+    container.appendChild(colsContainer);
+
+    // Helper to create column
+    const spColData = createColumnUI('🛍️ หน้าร้าน (SP)', '#2563eb', spNames, true);
+    const whColData = createColumnUI('🏢 คลังสินค้า / โกดัง (WH)', '#0f766e', whNames, false);
+
+    colsContainer.appendChild(spColData.colElement);
+    colsContainer.appendChild(whColData.colElement);
+
+    // Controls container
+    const controls = document.createElement('div');
+    controls.style.display = 'flex';
+    controls.style.justifyContent = 'center';
+    controls.style.gap = '10px';
+    controls.style.flexWrap = 'wrap';
+    controls.style.marginTop = '15px';
+
+    const saveNamesBtn = document.createElement('button');
+    saveNamesBtn.innerHTML = '💾 บันทึกรายชื่อในเครื่อง';
+    saveNamesBtn.style.background = 'linear-gradient(90deg,#10b981,#059669)';
+    saveNamesBtn.style.color = 'white';
+    saveNamesBtn.style.border = 'none';
+    saveNamesBtn.style.padding = '10px 20px';
+    saveNamesBtn.style.borderRadius = '999px';
+    saveNamesBtn.style.cursor = 'pointer';
+    saveNamesBtn.style.fontWeight = '600';
+    saveNamesBtn.style.fontSize = '14px';
+
+    saveNamesBtn.addEventListener('click', async () => {
+        const finalSpNames = spColData.getNames();
+        const finalWhNames = whColData.getNames();
+
+        const configToSave = {
+            spNames: finalSpNames,
+            whNames: finalWhNames
+        };
+
+        localStorage.setItem('custom_names_config', JSON.stringify(configToSave));
+        try {
+            if (typeof eel !== 'undefined' && eel.save_custom_names_config) {
+                await eel.save_custom_names_config(configToSave)();
+            }
+        } catch (e) {
+            console.error('Failed to save names config to backend:', e);
+        }
+        
+        saveNamesBtn.innerHTML = '✓ บันทึกสำเร็จ!';
+        setTimeout(() => saveNamesBtn.innerHTML = '💾 บันทึกรายชื่อในเครื่อง', 1400);
+    });
+
+    const genCopyBtn = document.createElement('button');
+    genCopyBtn.innerHTML = '📦 คัดลอกโค้ดแก้ไขรายชื่อ';
+    genCopyBtn.style.background = 'linear-gradient(90deg,#8b5cf6,#7c3aed)';
+    genCopyBtn.style.color = 'white';
+    genCopyBtn.style.border = 'none';
+    genCopyBtn.style.padding = '10px 20px';
+    genCopyBtn.style.borderRadius = '999px';
+    genCopyBtn.style.cursor = 'pointer';
+    genCopyBtn.style.fontWeight = '600';
+    genCopyBtn.style.fontSize = '14px';
+
+    genCopyBtn.addEventListener('click', () => {
+        const finalSpNames = spColData.getNames();
+        const finalWhNames = whColData.getNames();
+
+        const spData = finalSpNames.map(name => ({ name, source: 'SP', target: 'SP' }));
+        const whData = finalWhNames.map(name => ({ name, source: 'WH', target: 'WH' }));
+        const combinedData = [...whData, ...spData];
+
+        const generated = generateNameConfigCode(combinedData, codeBlockText);
+        copyToClipboard(generated);
+        genCopyBtn.innerHTML = '✓ คัดลอกสำเร็จแล้ว!';
+        setTimeout(() => genCopyBtn.innerHTML = '📦 คัดลอกโค้ดแก้ไขรายชื่อ', 1400);
+    });
+
+    const resetNamesBtn = document.createElement('button');
+    resetNamesBtn.innerHTML = '🔄 รีเซ็ตรายชื่อเริ่มต้น';
+    resetNamesBtn.style.background = 'linear-gradient(90deg,#6b7280,#4b5563)';
+    resetNamesBtn.style.color = 'white';
+    resetNamesBtn.style.border = 'none';
+    resetNamesBtn.style.padding = '10px 20px';
+    resetNamesBtn.style.borderRadius = '999px';
+    resetNamesBtn.style.cursor = 'pointer';
+    resetNamesBtn.style.fontWeight = '600';
+    resetNamesBtn.style.fontSize = '14px';
+
+    resetNamesBtn.addEventListener('click', async () => {
+        if (confirm('คุณต้องการรีเซ็ตรายชื่อทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?')) {
+            localStorage.removeItem('custom_names_config');
+            try {
+                if (typeof eel !== 'undefined' && eel.save_custom_names_config) {
+                    await eel.save_custom_names_config({spNames: [], whNames: []})();
+                }
+            } catch (e) {
+                console.error('Failed to reset custom names config on backend:', e);
+            }
+            await createInteractiveNameConfigUI(container, codeBlockText);
+        }
+    });
+
+    controls.appendChild(saveNamesBtn);
+    controls.appendChild(genCopyBtn);
+    controls.appendChild(resetNamesBtn);
+    container.appendChild(controls);
+}
+
+function parseNameConfigFromBlock(blockText) {
+    const results = [];
+    const re = /"([^"\\]+)"\s*:\s*\{\s*source:\s*"([^"\\]+)"\s*,\s*target:\s*"([^"\\]+)"\s*\}/g;
+    let m;
+    while ((m = re.exec(blockText)) !== null) {
+        results.push({ name: m[1], source: m[2], target: m[3] });
+    }
+    return results;
+}
+
+function generateNameConfigCode(entries, originalBlockText = '') {
+    const entriesBlock = entries.map(e => {
+        const safeName = e.name.replace(/\\"/g, '\\"');
+        return `    "${safeName}":       { source: "${e.source}", target: "${e.target}" },`;
+    }).join('\n');
+
+    const generatedObject = `const nameConfig = {\n${entriesBlock ? entriesBlock + '\n' : ''}};`;
+
+    if (originalBlockText && originalBlockText.includes('const nameConfig = {')) {
+        const pattern = /const nameConfig = \{[\s\S]*?\n\};/;
+        return originalBlockText.replace(pattern, generatedObject);
+    }
+
+    let out = '// แก้ไขรายชื่อและชื่อสาขาที่ต้องการ\n' + generatedObject + '\n';
+    out += '\n// นำโค้ดนี้ไปวางทับส่วนเดิม หรือใช้กับสคริปต์ของคุณ\n';
+    return out;
+}
+
+function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(err => console.error('Copy failed', err));
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) { console.error(e); }
+        ta.remove();
     }
 }

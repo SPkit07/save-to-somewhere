@@ -605,6 +605,23 @@
             display: grid !important;
         }
 
+        #tab-code.active-tab {
+            display: block !important;
+        }
+
+        .interactive-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .interactive-cols {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ==================== PREMIUM HEADER & TOGGLE SWITCH ==================== */
         .header-bar {
             position: relative;
@@ -1134,6 +1151,7 @@
             (ประมวลผลสาขา)</button>
         <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB
             สาขา</button>
+        <button class="tab-button" id="tabBtnCode" onclick="switchTab('code')">🧩 โค้ด (หน้า 3)</button>
     </div>
 
     <!-- Tab 1: Original Excel Processor -->
@@ -1367,6 +1385,38 @@
         </div>
     </div>
 
+    <!-- Tab 3: Code snippets (Page 3) -->
+    <div id="tab-code" class="tab-content" style="display:none; max-width:1400px; margin:0 auto; width:100%;">
+        <div style="min-width:0; width:100%;">
+            <div class="branch-display" style="border-left-color: #95a5a6; text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 style="color: #95a5a6; font-size: 16px; margin-bottom: 5px; text-transform: uppercase;">🧩 โค้ดตัวอย่าง (หน้า 3)</h2>
+                    <p style="color:#34495e; font-size:14px;">แต่ละบล็อคโค้ดจะมีชื่ออธิบาย และปุ่มคัดลอกด้านข้าง</p>
+                </div>
+                <button id="addCustomScriptBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">＋ เพิ่มสคริปต์ใหม่</button>
+            </div>
+            
+            <!-- Custom script creation form (hidden by default) -->
+            <div id="customScriptForm" style="display: none; max-width: 500px; margin: 16px auto 0 auto; background: white; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid #10b981; flex-direction: column; gap: 10px; width: 100%;">
+                <h3 style="margin: 0; font-size: 14px; color: #2c3e50;">✍️ เพิ่มสคริปต์ส่วนตัว</h3>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 11px; font-weight: 600; color: #7f8c8d;">ชื่ออธิบายสคริปต์</label>
+                    <input type="text" id="customScriptTitle" placeholder="เช่น กรองข้อมูลบางอย่าง, ล้างตาราง" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 11px; font-weight: 600; color: #7f8c8d;">โค้ดสคริปต์</label>
+                    <textarea id="customScriptCode" rows="4" placeholder="วางโค้ด JavaScript ของคุณที่นี่..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
+                    <button id="cancelCustomScriptBtn" style="background: #e2e8f0; color: #475569; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">ยกเลิก</button>
+                    <button id="saveCustomScriptBtn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">💾 บันทึกสคริปต์</button>
+                </div>
+            </div>
+
+            <div id="codeList" style="margin-top:16px; display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+    </div>
+
     <!-- ==================== PREVIEW MODAL ==================== -->
     <div class="modal" id="previewModal">
         <div class="modal-content">
@@ -1517,6 +1567,7 @@
     </div>
 
     <script src="/eel.js"></script>
+    <script src="code-data.js"></script>
     <script src="script.js"></script>
     <script>
         // Sync branch name to summary when summary is shown
