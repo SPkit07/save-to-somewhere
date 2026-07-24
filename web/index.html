@@ -4,12 +4,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel File Processor - Path Manager</title>
+    <title>Excel File Processor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        /* ==================== RESET & BASE ==================== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #f8f9fb;
+            --surface: #ffffff;
+            --surface-alt: #f3f4f6;
+            --border: #e5e7eb;
+            --border-light: #f0f1f3;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --accent: #4f6ef7;
+            --accent-light: #eef1fe;
+            --accent-hover: #3b5de7;
+            --green: #10b981;
+            --green-light: #ecfdf5;
+            --green-dark: #059669;
+            --red: #ef4444;
+            --red-light: #fef2f2;
+            --orange: #f59e0b;
+            --orange-light: #fffbeb;
+            --purple: #8b5cf6;
+            --purple-light: #f5f3ff;
+            --radius: 10px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.07);
+            --transition: 0.2s ease;
         }
 
         html {
@@ -17,560 +50,265 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
             min-height: 100dvh;
-            padding: 20px;
+            padding: 16px 20px;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
-        }
-
-        .container {
-            width: min(100%, 1400px);
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: minmax(320px, 0.95fr) minmax(380px, 1.05fr);
-            gap: 20px;
-            flex: 1 1 auto;
-            min-height: 0;
-        }
-
-        /* ==================== LEFT SECTION ==================== */
-        .left-section {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            min-width: 0;
-            min-height: 0;
-        }
-
-        .branch-display {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border-left: 5px solid #3498db;
-        }
-
-        .branch-display h2 {
-            color: #2c3e50;
-            font-size: 16px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .branch-name {
-            font-size: 42px;
-            font-weight: 700;
-            color: #3498db;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .branch-code {
+            color: var(--text);
             font-size: 14px;
-            color: #7f8c8d;
-            margin-top: 5px;
+            line-height: 1.5;
         }
 
-        .dropzone {
-            flex: 1;
-            background: white;
-            border: 3px dashed #bdc3c7;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        /* ==================== HEADER ==================== */
+        .header-bar {
             position: relative;
-            overflow: hidden;
-        }
-
-        .dropzone:hover {
-            border-color: #3498db;
-            background-color: #f8fafb;
-            transform: translateY(-2px);
-        }
-
-        .dropzone.dragover {
-            background-color: #ebf5fb;
-            border-color: #3498db;
-            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
-        }
-
-        .dropzone-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-            opacity: 0.7;
-        }
-
-        .dropzone-text {
-            text-align: center;
-        }
-
-        .dropzone-text h3 {
-            color: #2c3e50;
-            margin-bottom: 5px;
-            font-size: 18px;
-        }
-
-        .dropzone-text p {
-            color: #95a5a6;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .browse-btn {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .browse-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-        }
-
-        .status-message {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            display: none;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            border-left: 5px solid #2ecc71;
-        }
-
-        .status-message.error {
-            border-left-color: #e74c3c;
-            background-color: #fadbd8;
-            color: #c0392b;
-        }
-
-        .status-message.success {
-            border-left-color: #2ecc71;
-            background-color: #d5f4e6;
-            color: #27ae60;
-        }
-
-        .status-message.loading {
-            border-left-color: #f39c12;
-            background-color: #fef5e7;
-            color: #d68910;
-        }
-
-        .status-icon {
-            font-size: 18px;
-        }
-
-        /* ==================== RIGHT SECTION ==================== */
-        .right-section {
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            height: 80vh;
-            overflow-y: auto;
-            min-width: 0;
-            min-height: 0;
-
-        }
-
-        .right-section h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 18px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 10px;
-        }
-
-        .branch-paths {
+            z-index: 10000;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto 16px auto;
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            padding: 12px 20px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .branch-group {
-            background: #f8fafb;
-            border-radius: 8px;
-            padding: 18px;
-            border-left: 5px solid #3498db;
-            min-width: 0;
-        }
-
-        .branch-group h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
+        .header-logo {
             font-size: 16px;
-            font-weight: 600;
-        }
-
-        .path-input-group {
-            margin-bottom: 12px;
-        }
-
-        .path-input-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .path-label {
-            display: block;
-            color: #34495e;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .path-input {
-            width: 100%;
-            min-width: 0;
-            padding: 12px 15px;
-            border: 1px solid #bdc3c7;
-            border-radius: 6px;
-            font-size: 13px;
-            font-family: 'Courier New', monospace;
-            transition: all 0.3s ease;
-            background-color: white;
-        }
-
-        .path-input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-            background-color: #f8fafb;
-        }
-
-        .save-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .save-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
-        }
-
-        .save-btn:active {
-            transform: translateY(0);
-        }
-
-        /* ==================== RESPONSIVE ==================== */
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-                flex: 0 1 auto;
-                min-height: 0;
-                gap: 20px;
-            }
-
-            .right-section {
-                overflow-y: visible;
-            }
-        }
-
-        @media (max-width: 700px) {
-            body {
-                padding: 12px;
-            }
-
-            .container {
-                gap: 12px;
-            }
-
-            .left-section {
-                gap: 12px;
-            }
-
-            .branch-display,
-            .right-section,
-            .branch-group {
-                padding: 16px;
-            }
-
-            .branch-name {
-                font-size: 32px;
-            }
-        }
-
-        /* ==================== SCROLLBAR ==================== */
-        .right-section::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .right-section::-webkit-scrollbar-track {
-            background: #ecf0f1;
-            border-radius: 10px;
-        }
-
-        .right-section::-webkit-scrollbar-thumb {
-            background: #bdc3c7;
-            border-radius: 10px;
-        }
-
-        .right-section::-webkit-scrollbar-thumb:hover {
-            background: #95a5a6;
-        }
-
-        /* ==================== PREVIEW MODAL ==================== */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 500px;
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            padding: 20px;
+            font-weight: 700;
+            color: var(--text);
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 8px;
+            letter-spacing: -0.3px;
         }
 
-        .modal-header h2 {
-            margin: 0;
-            font-size: 18px;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 28px;
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            line-height: 1;
-        }
-
-        .modal-close:hover {
-            opacity: 0.8;
-        }
-
-        .modal-body {
-            padding: 25px;
-            background: #f8fafb;
-        }
-
-        .preview-item {
+        .header-controls {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #ecf0f1;
-            font-size: 14px;
+            gap: 12px;
         }
 
-        .preview-item:last-of-type {
-            border-bottom: none;
-        }
-
-        .preview-item label {
-            color: #2c3e50;
-            font-weight: 600;
-            min-width: 150px;
-        }
-
-        .preview-item span {
-            color: #34495e;
-            font-weight: 500;
-        }
-
-        .preview-split {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #ecf0f1;
-        }
-
-        .preview-item-half {
-            text-align: center;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            border: 2px solid #ecf0f1;
-        }
-
-        .preview-item-half label {
-            display: block;
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-
-        .count {
-            display: block;
-            font-size: 32px;
-            font-weight: bold;
-            color: #3498db;
-            margin-top: 5px;
-        }
-
-        .modal-footer {
-            padding: 20px;
-            background: white;
+        .status-toggle-container {
             display: flex;
+            align-items: center;
             gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .btn-cancel,
-        .btn-confirm {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-cancel {
-            background: #ecf0f1;
-            color: #2c3e50;
-        }
-
-        .btn-cancel:hover {
-            background: #bdc3c7;
-        }
-
-        .btn-confirm {
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
-        }
-
-        .btn-confirm:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
-        }
-
-        /* ==================== WARNING TABLE ==================== */
-        .warning-table-container {
-            max-height: 250px;
-            overflow-y: auto;
-            margin-top: 15px;
-            border: 1px solid #ecf0f1;
-            border-radius: 6px;
-        }
-
-        .warning-table {
-            width: 100%;
-            border-collapse: collapse;
             font-size: 13px;
-        }
-
-        .warning-table th,
-        .warning-table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .warning-table th {
-            background-color: #f8fafb;
-            color: #2c3e50;
             font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 1;
+            color: var(--text);
         }
 
-        .warning-table tr:hover {
-            background-color: #fdfefe;
+        .status-label {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            display: none;
         }
 
-        .warning-table td.mismatch {
-            color: #e74c3c;
-            font-weight: bold;
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
         }
 
-        /* ==================== TABS SWITCHER STYLE ==================== */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--red);
+            transition: 0.3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+        }
+
+        input:checked + .slider {
+            background-color: var(--green);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px var(--green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        .status-state-text {
+            min-width: 56px;
+            color: var(--green);
+            font-weight: 700;
+            font-size: 12px;
+            transition: color 0.3s;
+        }
+
+        .status-state-text.off {
+            color: var(--red);
+        }
+
+        /* Header gear toggle for exe settings */
+        .header-gear-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 15px;
+            line-height: 1;
+            transition: var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .header-gear-toggle:hover {
+            background: var(--surface-alt);
+            color: var(--text);
+        }
+
+        .header-settings-panel {
+            width: 100%;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+            margin-top: 4px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .header-settings-panel.open {
+            display: flex;
+        }
+
+        /* EXE Selector Styles */
+        .exe-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .exe-select {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            background-color: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            max-width: 220px;
+            transition: var(--transition);
+        }
+
+        .exe-select:hover {
+            border-color: var(--accent);
+        }
+
+        .exe-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-light);
+        }
+
+        .refresh-exe-btn,
+        .browse-exe-btn {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--surface);
+            cursor: pointer;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+
+        .refresh-exe-btn:hover,
+        .browse-exe-btn:hover {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .custom-path-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .custom-path-input {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            width: 240px;
+            transition: var(--transition);
+        }
+
+        .custom-path-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-light);
+        }
+
+        /* ==================== TABS ==================== */
         .tabs-container {
             max-width: 1400px;
-            margin: 0 0 20px 0;
+            width: 100%;
+            margin: 0 auto 16px auto;
             display: flex;
-            gap: 15px;
-            flex-wrap: nowrap;
+            gap: 2px;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            padding: 4px;
             overflow-x: auto;
         }
 
         .tabs-container::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .tabs-container::-webkit-scrollbar-track {
-            background: #ecf0f1;
-            border-radius: 10px;
-        }
-
-        .tabs-container::-webkit-scrollbar-thumb {
-            background: #bdc3c7;
-            border-radius: 10px;
+            height: 0;
         }
 
         .tab-button {
-            background: #ffffff;
-            color: #7f8c8d;
-            border: 1px solid #e2e8f0;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            transition: var(--transition);
             font-family: inherit;
             flex: 1 1 auto;
             white-space: nowrap;
@@ -578,23 +316,19 @@
         }
 
         .tab-button:hover {
-            color: #2c3e50;
-            background: #f8fafb;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            color: var(--text);
+            background: var(--surface-alt);
         }
 
         .tab-button.active {
-            color: white;
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            border-color: #3498db;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+            color: var(--accent);
+            background: var(--accent-light);
+            font-weight: 700;
         }
 
         .tab-button.active.bill-tab-btn {
-            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-            border-color: #9b59b6;
-            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+            color: var(--purple);
+            background: var(--purple-light);
         }
 
         .tab-content {
@@ -609,10 +343,808 @@
             display: block !important;
         }
 
+        /* ==================== MAIN LAYOUT ==================== */
+        .container {
+            width: min(100%, 1400px);
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(300px, 0.9fr) minmax(360px, 1.1fr);
+            gap: 16px;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        /* ==================== LEFT SECTION ==================== */
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        /* ==================== CARDS ==================== */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Branch Display */
+        .branch-display {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .branch-display h2 {
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .branch-name {
+            font-size: 38px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+
+        .branch-code {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* ==================== DROPZONE ==================== */
+        .dropzone {
+            flex: 1;
+            background: var(--surface);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            min-height: 180px;
+        }
+
+        .dropzone:hover {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .dropzone.dragover {
+            background-color: var(--accent-light);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+        }
+
+        .dropzone-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            opacity: 0.6;
+        }
+
+        .dropzone-text {
+            text-align: center;
+        }
+
+        .dropzone-text h3 {
+            color: var(--text);
+            margin-bottom: 4px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .dropzone-text p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .browse-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .browse-btn:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 2px 8px rgba(79, 110, 247, 0.25);
+        }
+
+        /* ==================== STATUS MESSAGE ==================== */
+        .status-message {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-message.error {
+            border-color: #fca5a5;
+            background-color: var(--red-light);
+            color: var(--red);
+        }
+
+        .status-message.success {
+            border-color: #6ee7b7;
+            background-color: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .status-message.loading {
+            border-color: #fcd34d;
+            background-color: var(--orange-light);
+            color: #b45309;
+        }
+
+        .status-icon {
+            font-size: 16px;
+        }
+
+        /* ==================== RIGHT SECTION ==================== */
+        .right-section {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            height: 80vh;
+            overflow-y: auto;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .right-section h2 {
+            color: var(--text);
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 10px;
+        }
+
+        /* ==================== BRANCH PATHS ==================== */
+        .branch-paths {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .branch-group {
+            background: var(--surface-alt);
+            border-radius: var(--radius);
+            padding: 14px;
+            border-left: 3px solid var(--accent);
+            min-width: 0;
+        }
+
+        .branch-group h3 {
+            color: var(--text);
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .path-input-group {
+            margin-bottom: 10px;
+        }
+
+        .path-input-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .path-label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .path-input {
+            width: 100%;
+            min-width: 0;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            font-size: 12px;
+            font-family: 'IBM Plex Mono', 'Courier New', monospace;
+            transition: var(--transition);
+            background-color: var(--surface);
+        }
+
+        .path-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-light);
+        }
+
+        .save-btn {
+            width: 100%;
+            background: var(--green);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 16px;
+        }
+
+        .save-btn:hover {
+            background: var(--green-dark);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+        }
+
+        .save-btn:active {
+            transform: scale(0.99);
+        }
+
+        /* ==================== COLLAPSIBLE DETAILS ==================== */
+        details.settings-panel {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        details.settings-panel > summary {
+            padding: 14px 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        details.settings-panel > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.settings-panel > summary::before {
+            content: "▸";
+            font-size: 11px;
+            transition: transform 0.2s ease;
+            color: var(--text-muted);
+        }
+
+        details.settings-panel[open] > summary::before {
+            transform: rotate(90deg);
+        }
+
+        details.settings-panel > summary:hover {
+            color: var(--text);
+            background: var(--surface-alt);
+        }
+
+        details.settings-panel > .details-content {
+            padding: 0 20px 20px 20px;
+        }
+
+        /* ==================== FILE SUMMARY CARD ==================== */
+        .file-summary {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .file-summary-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .summary-card {
+            background: var(--surface-alt);
+            padding: 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-light);
+        }
+
+        .summary-card-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .summary-card-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .summary-card-value.accent {
+            color: var(--accent);
+        }
+
+        .summary-card.full-width {
+            grid-column: span 2;
+        }
+
+        .summary-card .sp-wh-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sp-wh-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .sp-wh-divider {
+            width: 1px;
+            background: var(--border);
+            height: 36px;
+        }
+
+        .sp-wh-count {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .sp-wh-count.green { color: var(--green); }
+        .sp-wh-count.red { color: var(--red); }
+
+        /* ==================== SCROLLBAR ==================== */
+        .right-section::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .right-section::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .right-section::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .right-section::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* ==================== MODAL ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 500px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            background: var(--accent);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.8;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .modal-body {
+            padding: 20px;
+            background: var(--surface-alt);
+        }
+
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 13px;
+        }
+
+        .preview-item:last-of-type {
+            border-bottom: none;
+        }
+
+        .preview-item label {
+            color: var(--text);
+            font-weight: 600;
+            min-width: 140px;
+            font-size: 13px;
+        }
+
+        .preview-item span {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .preview-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .preview-item-half {
+            text-align: center;
+            padding: 14px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-light);
+        }
+
+        .preview-item-half label {
+            display: block;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .count {
+            display: block;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-top: 4px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            background: var(--surface);
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .btn-cancel,
+        .btn-confirm {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .btn-cancel {
+            background: var(--surface-alt);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-cancel:hover {
+            background: var(--border);
+        }
+
+        .btn-confirm {
+            background: var(--green);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: var(--green-dark);
+        }
+
+        /* ==================== WARNING TABLE ==================== */
+        .warning-table-container {
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+        }
+
+        .warning-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .warning-table th,
+        .warning-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .warning-table th {
+            background-color: var(--surface-alt);
+            color: var(--text);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .warning-table tr:hover {
+            background-color: var(--surface-alt);
+        }
+
+        .warning-table td.mismatch {
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        /* ==================== AUTOCOMPLETE ==================== */
+        .autocomplete-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .autocomplete-wrapper input {
+            width: 100%;
+            padding: 10px 36px 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-family: inherit;
+            transition: var(--transition);
+            background-color: var(--surface);
+        }
+
+        .autocomplete-wrapper input:focus {
+            outline: none;
+            border-color: var(--purple);
+            box-shadow: 0 0 0 2px var(--purple-light);
+        }
+
+        .autocomplete-wrapper .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: var(--purple);
+            pointer-events: none;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+            animation: dropdownSlide 0.15s ease;
+        }
+
+        @keyframes dropdownSlide {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .autocomplete-item {
+            padding: 9px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.1s;
+        }
+
+        .autocomplete-item:first-child {
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        .autocomplete-item:last-child {
+            border-radius: 0 0 var(--radius) var(--radius);
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background: var(--purple-light);
+        }
+
+        .autocomplete-item .ac-icon {
+            font-size: 13px;
+            color: var(--purple);
+            flex-shrink: 0;
+        }
+
+        .autocomplete-item .ac-text {
+            flex: 1;
+        }
+
+        .autocomplete-item .ac-text mark {
+            background: transparent;
+            color: var(--purple);
+            font-weight: 700;
+        }
+
+        .autocomplete-empty {
+            padding: 12px 14px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        /* ==================== SAVE PATH GRID (Tab 2) ==================== */
+        .save-paths-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .save-path-item {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-light);
+        }
+
+        .save-path-item .sp-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .save-path-item .sp-input-row {
+            display: flex;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .save-path-item .sp-input-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: 'IBM Plex Mono', monospace;
+            transition: var(--transition);
+        }
+
+        .save-path-item .sp-input-row input:focus {
+            outline: none;
+            border-color: var(--purple);
+            box-shadow: 0 0 0 2px var(--purple-light);
+        }
+
+        .save-path-item .sp-browse-btn {
+            background: var(--purple);
+            color: white;
+            border: none;
+            padding: 5px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+
+        .save-path-item .sp-browse-btn:hover {
+            background: #7c3aed;
+        }
+
+        /* ==================== INTERACTIVE COLS ==================== */
         .interactive-cols {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
             width: 100%;
         }
 
@@ -622,207 +1154,131 @@
             }
         }
 
-        /* ==================== PREMIUM HEADER & TOGGLE SWITCH ==================== */
-        .header-bar {
-            position: relative;
-            z-index: 10000;
-            max-width: 1400px;
-            margin: 0 auto 20px auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            padding: 15px 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            width: 100%;
-        }
-
-        .header-logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #2c3e50;
-            background: #f8fafb;
-            padding: 8px 16px;
-            border-radius: 30px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .status-label {
-            color: #7f8c8d;
+        /* ==================== SAVED FILE LINK ==================== */
+        .saved-file-link {
+            cursor: pointer;
+            color: var(--accent);
+            transition: var(--transition);
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 4px;
             font-size: 13px;
         }
 
-        .switch {
-            position: relative;
-            display: inline-block;
+        .saved-file-link:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+            background-color: var(--accent-light);
+        }
+
+        .saved-file-link:active {
+            transform: scale(0.97);
+        }
+
+        /* ==================== SHUTDOWN OVERLAY ==================== */
+        .shutdown-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-direction: column;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .shutdown-spinner {
             width: 50px;
-            height: 26px;
-            flex-shrink: 0;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #e74c3c;
-            transition: .4s;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-        }
-
-        input:checked + .slider {
-            background-color: #2ecc71;
-        }
-
-        input:focus + .slider {
-            box-shadow: 0 0 1px #2ecc71;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(24px);
-        }
-
-        .slider.round {
-            border-radius: 34px;
-        }
-
-        .slider.round:before {
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
+            border-top-color: var(--red);
+            animation: spin 1s ease-in-out infinite;
         }
 
-        .status-state-text {
-            min-width: 90px;
-            color: #2ecc71;
-            font-weight: 700;
-            transition: color 0.3s;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .status-state-text.off {
-            color: #e74c3c;
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                flex: 0 1 auto;
+                min-height: 0;
+            }
+
+            .right-section {
+                overflow-y: visible;
+                height: auto;
+            }
         }
 
-        /* EXE Selector Styles */
-        .exe-selector-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 12px;
-            border-left: 1px solid #e2e8f0;
-            padding-left: 12px;
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                gap: 10px;
+            }
+
+            .left-section {
+                gap: 10px;
+            }
+
+            .branch-display,
+            .right-section,
+            .branch-group {
+                padding: 14px;
+            }
+
+            .branch-name {
+                font-size: 30px;
+            }
+
+            .tabs-container {
+                margin-bottom: 10px;
+            }
+
+            .tab-button {
+                padding: 9px 12px;
+                font-size: 12px;
+            }
+
+            .save-paths-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-bar {
+                padding: 10px 14px;
+            }
         }
 
-        .exe-select {
-            padding: 6px 10px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
-            font-size: 12px;
-            background-color: white;
-            color: #2c3e50;
-            cursor: pointer;
-            max-width: 200px;
-            transition: all 0.2s;
+        @media (max-width: 480px) {
+            .path-input-group>div[style*="display: flex"],
+            .save-path-item .sp-input-row {
+                flex-direction: column;
+            }
+
+            .browse-btn,
+            .save-path-item .sp-browse-btn {
+                width: 100%;
+            }
+
+            .modal-footer,
+            .preview-item,
+            .preview-split {
+                display: block;
+            }
         }
 
-        .exe-select:hover {
-            border-color: #3498db;
-            background-color: #f0f8ff;
-        }
-
-        .exe-select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-        }
-
-        .refresh-exe-btn {
-            padding: 6px 10px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
-            background-color: white;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-
-        .refresh-exe-btn:hover {
-            background-color: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-
-        /* Custom Path Input Styles */
-        .custom-path-container {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 12px;
-            border-left: 1px solid #e2e8f0;
-            padding-left: 12px;
-        }
-
-        .custom-path-input {
-            padding: 6px 10px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
-            font-size: 12px;
-            width: 250px;
-            transition: all 0.2s;
-        }
-
-        .custom-path-input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-        }
-
-        .browse-exe-btn {
-            padding: 6px 10px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
-            background-color: white;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-
-        .browse-exe-btn:hover {
-            background-color: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-
-        /* Responsive layout for status toggle */
         @media (max-width: 1400px) {
             .status-toggle-container {
                 flex-wrap: wrap;
@@ -841,322 +1297,65 @@
             }
         }
 
-        /* Fullscreen Overlay for shutdown */
-        .shutdown-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            color: white;
+        /* ==================== TAB 2 LAYOUT: Single column clean ==================== */
+        #tab-bill-processor.active-tab {
+            display: flex !important;
             flex-direction: column;
-            gap: 20px;
-            text-align: center;
-        }
-
-        .shutdown-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: #e74c3c;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ==================== GOOGLE-STYLE AUTOCOMPLETE ==================== */
-        .autocomplete-wrapper {
-            position: relative;
+            gap: 14px;
+            max-width: 720px;
+            margin: 0 auto;
             width: 100%;
-        }
-
-        .autocomplete-wrapper input {
-            width: 100%;
-            padding: 12px 40px 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 24px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background-color: #f8fafb;
-        }
-
-        .autocomplete-wrapper input:focus {
-            outline: none;
-            border-color: #9b59b6;
-            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.15);
-            background-color: #fff;
-        }
-
-        .autocomplete-wrapper .search-icon {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 16px;
-            color: #9b59b6;
-            pointer-events: none;
-        }
-
-        .autocomplete-dropdown {
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-            max-height: 260px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-        }
-
-        .autocomplete-dropdown.show {
-            display: block;
-            animation: dropdownSlide 0.2s ease;
-        }
-
-        @keyframes dropdownSlide {
-            from {
-                opacity: 0;
-                transform: translateY(-6px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .autocomplete-item {
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #2c3e50;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: background 0.15s;
-        }
-
-        .autocomplete-item:first-child {
-            border-radius: 12px 12px 0 0;
-        }
-
-        .autocomplete-item:last-child {
-            border-radius: 0 0 12px 12px;
-        }
-
-        .autocomplete-item:hover,
-        .autocomplete-item.highlighted {
-            background: linear-gradient(90deg, #f3e8ff 0%, #f8fafb 100%);
-        }
-
-        .autocomplete-item .ac-icon {
-            font-size: 14px;
-            color: #9b59b6;
-            flex-shrink: 0;
-        }
-
-        .autocomplete-item .ac-text {
-            flex: 1;
-        }
-
-        .autocomplete-item .ac-text mark {
-            background: transparent;
-            color: #9b59b6;
-            font-weight: 700;
-        }
-
-        .autocomplete-empty {
-            padding: 14px 16px;
-            text-align: center;
-            color: #95a5a6;
-            font-size: 13px;
-        }
-
-        .autocomplete-dropdown::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .autocomplete-dropdown::-webkit-scrollbar-thumb {
-            background: #d5d5d5;
-            border-radius: 3px;
-        }
-
-        /* ==================== SAVE PATH MINI GROUP (Tab 2) ==================== */
-        .save-paths-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 12px;
-        }
-
-        .save-path-item {
-            background: #fff;
-            border-radius: 8px;
-            padding: 12px 14px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .save-path-item .sp-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-
-        .save-path-item .sp-input-row {
-            display: flex;
-            gap: 6px;
-            min-width: 0;
-        }
-
-        .save-path-item .sp-input-row input {
-            flex: 1;
-            min-width: 0;
-            padding: 8px 10px;
-            border: 1px solid #d5dbe0;
-            border-radius: 6px;
-            font-size: 12px;
-            font-family: 'Courier New', monospace;
-            transition: border-color 0.2s;
-        }
-
-        .save-path-item .sp-input-row input:focus {
-            outline: none;
-            border-color: #9b59b6;
-            box-shadow: 0 0 0 2px rgba(155, 89, 182, 0.1);
-        }
-
-        .save-path-item .sp-browse-btn {
-            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-
-        .save-path-item .sp-browse-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(155, 89, 182, 0.3);
-        }
-
-        @media (max-width: 700px) {
-            .tabs-container {
-                margin-bottom: 12px;
-            }
-
-            .tab-button {
-                padding: 11px 14px;
-            }
-
-            .save-paths-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-
-            .path-input-group>div[style*="display: flex"],
-            .save-path-item .sp-input-row {
-                flex-direction: column;
-            }
-
-            .browse-btn,
-            .save-path-item .sp-browse-btn {
-                width: 100%;
-            }
-
-            .modal-footer,
-            .preview-item,
-            .preview-split {
-                display: block;
-            }
-        }
-
-        /* ==================== SAVED FILE LINK (Card 3 clickable) ==================== */
-        .saved-file-link {
-            cursor: pointer;
-            color: #2980b9;
-            transition: all 0.2s ease;
-            display: inline-block;
-            padding: 2px 4px;
-            border-radius: 4px;
-        }
-
-        .saved-file-link:hover {
-            color: #1a5276;
-            text-decoration: underline;
-            background-color: rgba(52, 152, 219, 0.08);
-        }
-
-        .saved-file-link:active {
-            transform: scale(0.97);
         }
     </style>
 </head>
 
 <body>
-    <!-- Premium Header with ON/OFF Switch -->
+    <!-- ==================== HEADER ==================== -->
     <div class="header-bar">
-        <div class="header-logo">
-            <span class="logo-icon">📊</span> Excel File Processor
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+            <div class="header-logo">
+                <span>📊</span> Excel Processor
+            </div>
+            <div class="header-controls">
+                <div class="status-toggle-container">
+                    <span class="status-label">สวิตช์ปิด/เปิดโปรแกรม (หลอก Bplus):</span>
+                    <label class="switch">
+                        <input type="checkbox" id="programStatusToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="status-state-text" id="statusStateText">ON</span>
+                </div>
+            </div>
         </div>
-        <div class="status-toggle-container">
-            <span class="status-label">สวิตช์ปิด/เปิดโปรแกรม (หลอก Bplus):</span>
-            <label class="switch">
-                <input type="checkbox" id="programStatusToggle" checked>
-                <span class="slider round"></span>
-            </label>
-            <span class="status-state-text" id="statusStateText">เปิดทำงาน (ON)</span>
-            
-            <!-- Recent EXE Files Dropdown -->
+        <button class="header-gear-toggle" id="headerGearBtn" title="ตั้งค่า EXE">⚙️</button>
+
+        <!-- Collapsible EXE settings -->
+        <div class="header-settings-panel" id="headerSettingsPanel">
             <div class="exe-selector-container">
                 <select id="recentExeSelect" class="exe-select">
                     <option value="">-- เลือกไฟล์ .exe ล่าสุด --</option>
                 </select>
                 <button class="refresh-exe-btn" id="refreshExeBtn" title="รีเฟรชรายการ .exe">🔄</button>
             </div>
-            
-            <!-- Custom Path Input -->
             <div class="custom-path-container">
-                <input type="text" id="customExePath" class="custom-path-input" placeholder="หรือป้อน path ของไฟล์ .exe" title="ป้อน path เต็มของไฟล์ .exe เช่น C:\path\to\program.exe">
+                <input type="text" id="customExePath" class="custom-path-input"
+                    placeholder="หรือป้อน path ของไฟล์ .exe"
+                    title="ป้อน path เต็มของไฟล์ .exe เช่น C:\path\to\program.exe">
                 <button class="browse-exe-btn" id="browseExeBtn" title="เรียกดู">📁</button>
             </div>
         </div>
     </div>
 
-    <!-- Navigation Tabs -->
+    <!-- ==================== TABS ==================== -->
     <div class="tabs-container">
-        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก
-            (ประมวลผลสาขา)</button>
-        <button class="tab-button" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB
-            สาขา</button>
-        <button class="tab-button" id="tabBtnCode" onclick="switchTab('code')">🧩 โค้ด (หน้า 3)</button>
+        <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก</button>
+        <button class="tab-button bill-tab-btn" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB</button>
+        <button class="tab-button" id="tabBtnCode" onclick="switchTab('code')">🧩 โค้ด</button>
     </div>
 
-    <!-- Tab 1: Original Excel Processor -->
+    <!-- ==================== TAB 1: Excel Processor ==================== -->
     <div id="tab-processor" class="tab-content container active-tab">
-        <!-- ==================== LEFT SECTION ==================== -->
+        <!-- LEFT SECTION -->
         <div class="left-section">
             <div class="branch-display">
                 <h2>ตรวจพบสาขา</h2>
@@ -1180,240 +1379,215 @@
             </div>
         </div>
 
-        <!-- ==================== RIGHT SECTION ==================== -->
-        <div style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
-            <!-- กล่องสรุปข้อมูลไฟล์ล่าสุด -->
-            <div id="fileSummaryDisplay"
-                style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border-left: 5px solid #f39c12;">
-                <h2
-                    style="color: #d35400; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #fce4ec; padding-bottom: 10px; cursor: pointer;">
-                    📊 สรุปข้อมูลไฟล์ล่าสุด</h2>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <!-- Card 1 -->
-                    <div
-                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                        <p
-                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
-                            📍 ชื่อสาขา</p>
-                        <p id="summaryBranchName" style="font-size: 16px; font-weight: bold; color: #2c3e50;">-</p>
+        <!-- RIGHT SECTION -->
+        <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+            <!-- File Summary Display -->
+            <div class="file-summary" id="fileSummaryDisplay">
+                <div class="file-summary-title">📊 สรุปข้อมูลไฟล์ล่าสุด</div>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-card-label">📍 ชื่อสาขา</div>
+                        <div class="summary-card-value" id="summaryBranchName">-</div>
                     </div>
-
-                    <!-- Card 2 -->
-                    <div
-                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: center;">
-                        <p
-                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
-                            📊 จำนวนแถวรวม</p>
-                        <p id="summaryTotalRows" style="font-size: 20px; font-weight: bold; color: #3498db;">0</p>
+                    <div class="summary-card">
+                        <div class="summary-card-label">📊 จำนวนแถวรวม</div>
+                        <div class="summary-card-value accent" id="summaryTotalRows">0</div>
                     </div>
-
-                    <!-- Card 3 -->
-                    <div
-                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2;">
-                        <p
-                            style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
-                            📁 ชื่อไฟล์ที่เซฟ</p>
-                        <p id="summaryFileName"
-                            style="font-size: 14px; color: #34495e; word-break: break-all; font-family: monospace;">-
-                        </p>
+                    <div class="summary-card full-width">
+                        <div class="summary-card-label">📁 ชื่อไฟล์ที่เซฟ</div>
+                        <div id="summaryFileName" style="font-size: 13px; color: var(--text); word-break: break-all; font-family: 'IBM Plex Mono', monospace;">-</div>
                     </div>
-
-                    <!-- Card 4 -->
-                    <div
-                        style="background: #f8fafb; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; grid-column: span 2; display: flex; justify-content: space-around; align-items: center;">
-                        <div style="text-align: center; flex: 1;">
-                            <p
-                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
-                                🏪 หน้าร้าน (SP)</p>
-                            <p id="summarySPCount" style="font-size: 30px; font-weight: bold; color: #1caa57;">0</p>
-                        </div>
-                        <div style="width: 2px; background: #e2e8f0; height: 100%; min-height: 40px;"></div>
-                        <div style="text-align: center; flex: 1;">
-                            <p
-                                style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; font-weight: 600;">
-                                🏢 โกดัง (WH)</p>
-                            <p id="summaryWHCount" style="font-size: 30px; font-weight: bold; color: #e24635;">0</p>
+                    <div class="summary-card full-width">
+                        <div class="sp-wh-row">
+                            <div class="sp-wh-item">
+                                <div class="summary-card-label">🏪 หน้าร้าน (SP)</div>
+                                <div class="sp-wh-count green" id="summarySPCount">0</div>
+                            </div>
+                            <div class="sp-wh-divider"></div>
+                            <div class="sp-wh-item">
+                                <div class="summary-card-label">🏢 โกดัง (WH)</div>
+                                <div class="sp-wh-count red" id="summaryWHCount">0</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <details class="branch-display" style="border-left-color: #3498db; text-align: left; padding: 25px;">
-                <summary
-                    style="color: #2c3e50; font-size: 16px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; cursor: pointer;">
-                    ⚙️ ตั้งค่า Path ปลายทาง</summary>
-                <div class="branch-paths" id="branchPaths"></div>
-                <button class="save-btn" id="saveBtn" style="margin-top: 20px;">💾 บันทึกการตั้งค่า</button>
+            <!-- Settings Panel (collapsed by default) -->
+            <details class="settings-panel">
+                <summary>⚙️ ตั้งค่า Path ปลายทาง</summary>
+                <div class="details-content">
+                    <div class="branch-paths" id="branchPaths"></div>
+                    <button class="save-btn" id="saveBtn">💾 บันทึกการตั้งค่า</button>
+                </div>
             </details>
         </div>
     </div>
 
-    <!-- Tab 2: Bill Processor (Second Page) -->
-    <div id="tab-bill-processor" class="tab-content container">
-        <!-- LEFT SECTION: Inputs and Run -->
-        <div class="left-section">
-            <div class="branch-display" style="border-left-color: #9b59b6; text-align: left;">
-                <h2 style="color: #9b59b6; font-size: 16px; margin-bottom: 15px; text-transform: uppercase;">🏢
-                    เลือกข้อมูลบิลย้อนหลัง</h2>
+    <!-- ==================== TAB 2: Bill Processor ==================== -->
+    <div id="tab-bill-processor" class="tab-content">
+        <!-- Main controls -->
+        <div class="card" style="padding: 20px;">
+            <div style="margin-bottom: 16px;">
+                <label class="path-label">🏬 เลือกสาขา (Kmart)</label>
+                <select id="kmartSelect" class="path-input"
+                    style="font-family: inherit; font-size: 13px; font-weight: 500;">
+                    <option value="K1">K1 (สาขา 11)</option>
+                    <option value="K2">K2 (สาขา 21)</option>
+                    <option value="K3">K3 (สาขา 31)</option>
+                    <option value="K4">K4 (สาขา 41)</option>
+                    <option value="K5">K5 (สาขา 51)</option>
+                    <option value="SP">SP (คลังสินค้า 00)</option>
+                </select>
+            </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label class="path-label" style="margin-bottom: 8px;">🏬 เลือกสาขา (Kmart)</label>
-                    <select id="kmartSelect" class="path-input"
-                        style="font-family: inherit; font-size: 14px; font-weight: 500; height: auto;">
-                        <option value="K1">K1 (สาขา 11)</option>
-                        <option value="K2">K2 (สาขา 21)</option>
-                        <option value="K3">K3 (สาขา 31)</option>
-                        <option value="K4">K4 (สาขา 41)</option>
-                        <option value="K5">K5 (สาขา 51)</option>
-                        <option value="SP">SP (คลังสินค้า 00)</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <label class="path-label" style="margin-bottom: 8px;">🔍 ค้นหาบิล (เดือน - ท้ายบิล)</label>
-                    <div class="autocomplete-wrapper">
-                        <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3"
-                            autocomplete="off">
-                        <span class="search-icon">🔍</span>
-                        <div class="autocomplete-dropdown" id="billDropdown"></div>
-                    </div>
+            <div style="margin-bottom: 16px;">
+                <label class="path-label">🔍 ค้นหาบิล (เดือน - ท้ายบิล)</label>
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="billInput" placeholder="พิมพ์เพื่อค้นหา เช่น: 05, 05-1, 12-3"
+                        autocomplete="off">
+                    <span class="search-icon">🔍</span>
+                    <div class="autocomplete-dropdown" id="billDropdown"></div>
                 </div>
             </div>
 
             <button class="save-btn" id="runBillBtn"
-                style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 0; display: block;">🚀
-                เริ่มประมวลผลบิล</button>
-
-            <div class="status-message" id="billStatusMessage" style="border-left-color: #9b59b6;">
-                <span class="status-icon" id="billStatusIcon">⏳</span>
-                <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
-            </div>
-
-            <div class="branch-group" id="billResultCard"
-                style="border-left-color: #2ecc71; display: none; background-color: #f4fbf7; max-height: 280px; overflow-y: auto;">
-                <h3 style="color: #27ae60; margin-bottom: 10px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
-                <div id="billResultContent"
-                    style="font-size: 14px; line-height: 1.6; color: #2c3e50; white-space: pre-wrap;"></div>
-            </div>
+                style="background: var(--purple); margin-top: 0;">🚀 เริ่มประมวลผลบิล</button>
         </div>
 
-        <!-- RIGHT SECTION: Directory Settings & Logs -->
-        <div class="right-section">
-            <h2>⚙️ ตั้งค่าโฟลเดอร์ & เส้นทางประมวลผล</h2>
-
-            <div class="branch-paths">
-                <!-- Search Paths (part_a, part_b) -->
-                <div class="branch-group" style="border-left-color: #3498db;">
-                    <h3>🔎 โฟลเดอร์ค้นหาไฟล์ Excel</h3>
-
-                    <div class="path-input-group">
-                        <label class="path-label">📂 part_a (Google Drive KMART ใช้งาน)</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="partAInput" class="path-input"
-                                placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
-                            <button class="browse-btn" id="browsePartABtn"
-                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
-                        </div>
-                    </div>
-
-                    <div class="path-input-group">
-                        <label class="path-label">📂 part_b (Google Drive SP)</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="partBInput" class="path-input" placeholder="เลือกโฟลเดอร์ SP">
-                            <button class="browse-btn" id="browsePartBBtn"
-                                style="white-space: nowrap; padding: 10px 15px;">เลือกโฟลเดอร์</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Save Paths per branch -->
-                <div class="branch-group" style="border-left-color: #9b59b6;">
-                    <h3>💾 โฟลเดอร์ปลายทางเซฟไฟล์ .txt (แยกตามสาขา)</h3>
-                    <div class="save-paths-grid">
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 K1 (สาขา 11)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathK1" placeholder="C:\Users\...\K mart 1\เดือน 05">
-                                <button class="sp-browse-btn" data-save-target="savePathK1">📂</button>
-                            </div>
-                        </div>
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 K2 (สาขา 21)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathK2" placeholder="C:\Users\...\K mart 2\เดือน 05">
-                                <button class="sp-browse-btn" data-save-target="savePathK2">📂</button>
-                            </div>
-                        </div>
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 K3 (สาขา 31)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathK3" placeholder="C:\Users\...\K mart 3\เดือน 05">
-                                <button class="sp-browse-btn" data-save-target="savePathK3">📂</button>
-                            </div>
-                        </div>
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 K4 (สาขา 41)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathK4" placeholder="C:\Users\...\K mart 4\เดือน 05">
-                                <button class="sp-browse-btn" data-save-target="savePathK4">📂</button>
-                            </div>
-                        </div>
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 K5 (สาขา 51)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathK5" placeholder="C:\Users\...\K mart 5\เดือน 05">
-                                <button class="sp-browse-btn" data-save-target="savePathK5">📂</button>
-                            </div>
-                        </div>
-                        <div class="save-path-item">
-                            <div class="sp-label">📁 SP (คลังสินค้า 00)</div>
-                            <div class="sp-input-row">
-                                <input type="text" id="savePathSP" placeholder="C:\Users\...\Desktop">
-                                <button class="sp-browse-btn" data-save-target="savePathSP">📂</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ปุ่มบันทึกการตั้งค่าทั้งหมดสำหรับหน้าที่สอง -->
-                <button class="save-btn" id="saveBillPathsBtn"
-                    style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); margin-top: 5px; margin-bottom: 15px;">💾
-                    บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
-
-            </div>
+        <!-- Status & Result -->
+        <div class="status-message" id="billStatusMessage" style="border-color: var(--purple);">
+            <span class="status-icon" id="billStatusIcon">⏳</span>
+            <span id="billStatusText">กำลังเตรียมความพร้อม...</span>
         </div>
+
+        <div class="branch-group" id="billResultCard"
+            style="border-left-color: var(--green); display: none; background-color: var(--green-light); max-height: 240px; overflow-y: auto;">
+            <h3 style="color: var(--green-dark); margin-bottom: 8px;">📊 ผลลัพธ์การประมวลผลล่าสุด</h3>
+            <div id="billResultContent"
+                style="font-size: 13px; line-height: 1.6; color: var(--text); white-space: pre-wrap;"></div>
+        </div>
+
+        <!-- Settings (collapsed) -->
+        <details class="settings-panel">
+            <summary>⚙️ ตั้งค่าโฟลเดอร์ & เส้นทางประมวลผล</summary>
+            <div class="details-content">
+                <div class="branch-paths">
+                    <!-- Search Paths -->
+                    <div class="branch-group" style="border-left-color: var(--accent);">
+                        <h3>🔎 โฟลเดอร์ค้นหาไฟล์ Excel</h3>
+                        <div class="path-input-group">
+                            <label class="path-label">📂 part_a (Google Drive KMART ใช้งาน)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="partAInput" class="path-input"
+                                    placeholder="เลือกโฟลเดอร์ KMART(ใช้งาน)">
+                                <button class="browse-btn" id="browsePartABtn"
+                                    style="white-space: nowrap; padding: 9px 14px;">เลือกโฟลเดอร์</button>
+                            </div>
+                        </div>
+                        <div class="path-input-group">
+                            <label class="path-label">📂 part_b (Google Drive SP)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="partBInput" class="path-input"
+                                    placeholder="เลือกโฟลเดอร์ SP">
+                                <button class="browse-btn" id="browsePartBBtn"
+                                    style="white-space: nowrap; padding: 9px 14px;">เลือกโฟลเดอร์</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Paths per branch -->
+                    <div class="branch-group" style="border-left-color: var(--purple);">
+                        <h3>💾 โฟลเดอร์ปลายทางเซฟไฟล์ .txt</h3>
+                        <div class="save-paths-grid">
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 K1 (สาขา 11)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathK1" placeholder="C:\Users\...\K mart 1\เดือน 05">
+                                    <button class="sp-browse-btn" data-save-target="savePathK1">📂</button>
+                                </div>
+                            </div>
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 K2 (สาขา 21)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathK2" placeholder="C:\Users\...\K mart 2\เดือน 05">
+                                    <button class="sp-browse-btn" data-save-target="savePathK2">📂</button>
+                                </div>
+                            </div>
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 K3 (สาขา 31)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathK3" placeholder="C:\Users\...\K mart 3\เดือน 05">
+                                    <button class="sp-browse-btn" data-save-target="savePathK3">📂</button>
+                                </div>
+                            </div>
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 K4 (สาขา 41)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathK4" placeholder="C:\Users\...\K mart 4\เดือน 05">
+                                    <button class="sp-browse-btn" data-save-target="savePathK4">📂</button>
+                                </div>
+                            </div>
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 K5 (สาขา 51)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathK5" placeholder="C:\Users\...\K mart 5\เดือน 05">
+                                    <button class="sp-browse-btn" data-save-target="savePathK5">📂</button>
+                                </div>
+                            </div>
+                            <div class="save-path-item">
+                                <div class="sp-label">📁 SP (คลังสินค้า 00)</div>
+                                <div class="sp-input-row">
+                                    <input type="text" id="savePathSP" placeholder="C:\Users\...\Desktop">
+                                    <button class="sp-browse-btn" data-save-target="savePathSP">📂</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="save-btn" id="saveBillPathsBtn"
+                        style="background: var(--purple);">💾 บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
+                </div>
+            </div>
+        </details>
     </div>
 
-    <!-- Tab 3: Code snippets (Page 3) -->
+    <!-- ==================== TAB 3: Code snippets ==================== -->
     <div id="tab-code" class="tab-content" style="display:none; max-width:1400px; margin:0 auto; width:100%;">
         <div style="min-width:0; width:100%;">
-            <div class="branch-display" style="border-left-color: #95a5a6; text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div class="card" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
-                    <h2 style="color: #95a5a6; font-size: 16px; margin-bottom: 5px; text-transform: uppercase;">🧩 โค้ดตัวอย่าง (หน้า 3)</h2>
-                    <p style="color:#34495e; font-size:14px;">แต่ละบล็อคโค้ดจะมีชื่ออธิบาย และปุ่มคัดลอกด้านข้าง</p>
+                    <h2 style="color: var(--text); font-size: 14px; margin-bottom: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🧩 โค้ดตัวอย่าง</h2>
+                    <p style="color: var(--text-secondary); font-size: 12px;">แต่ละบล็อคมีปุ่มคัดลอก</p>
                 </div>
-                <button id="addCustomScriptBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">＋ เพิ่มสคริปต์ใหม่</button>
+                <button id="addCustomScriptBtn"
+                    style="background: var(--green); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: var(--transition);">＋ เพิ่มสคริปต์ใหม่</button>
             </div>
-            
-            <!-- Custom script creation form (hidden by default) -->
-            <div id="customScriptForm" style="display: none; max-width: 500px; margin: 16px auto 0 auto; background: white; border-radius: 12px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid #10b981; flex-direction: column; gap: 10px; width: 100%;">
-                <h3 style="margin: 0; font-size: 14px; color: #2c3e50;">✍️ เพิ่มสคริปต์ส่วนตัว</h3>
+
+            <!-- Custom script creation form -->
+            <div id="customScriptForm"
+                style="display: none; max-width: 500px; margin: 12px auto 0 auto; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; border: 1px solid var(--green); flex-direction: column; gap: 10px; width: 100%;">
+                <h3 style="margin: 0; font-size: 13px; color: var(--text); font-weight: 700;">✍️ เพิ่มสคริปต์ส่วนตัว</h3>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 11px; font-weight: 600; color: #7f8c8d;">ชื่ออธิบายสคริปต์</label>
-                    <input type="text" id="customScriptTitle" placeholder="เช่น กรองข้อมูลบางอย่าง, ล้างตาราง" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">ชื่ออธิบายสคริปต์</label>
+                    <input type="text" id="customScriptTitle" placeholder="เช่น กรองข้อมูลบางอย่าง, ล้างตาราง"
+                        style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 11px; font-weight: 600; color: #7f8c8d;">โค้ดสคริปต์</label>
-                    <textarea id="customScriptCode" rows="4" placeholder="วางโค้ด JavaScript ของคุณที่นี่..." style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">โค้ดสคริปต์</label>
+                    <textarea id="customScriptCode" rows="4"
+                        placeholder="วางโค้ด JavaScript ของคุณที่นี่..."
+                        style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; resize: vertical;"></textarea>
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
-                    <button id="cancelCustomScriptBtn" style="background: #e2e8f0; color: #475569; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">ยกเลิก</button>
-                    <button id="saveCustomScriptBtn" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">💾 บันทึกสคริปต์</button>
+                    <button id="cancelCustomScriptBtn"
+                        style="background: var(--surface-alt); color: var(--text-secondary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">ยกเลิก</button>
+                    <button id="saveCustomScriptBtn"
+                        style="background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">💾 บันทึกสคริปต์</button>
                 </div>
             </div>
 
-            <div id="codeList" style="margin-top:16px; display:flex; flex-direction:column; gap:12px;"></div>
+            <div id="codeList" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;"></div>
         </div>
     </div>
 
@@ -1424,23 +1598,19 @@
                 <h2>📋 สรุปข้อมูลไฟล์ก่อนประมวลผล</h2>
                 <button class="modal-close" onclick="closePreviewModal()">&times;</button>
             </div>
-
             <div class="modal-body">
                 <div class="preview-item">
                     <label>📄 ชื่อไฟล์:</label>
                     <span id="previewFileName">-</span>
                 </div>
-
                 <div class="preview-item">
                     <label>📊 จำนวนแถวทั้งหมด:</label>
                     <span id="previewTotalRows">-</span> บรรทัด
                 </div>
-
                 <div class="preview-item">
                     <label>🏢 สาขา:</label>
                     <span id="previewBranch">-</span> (รหัส: <span id="previewBranchCode">-</span>)
                 </div>
-
                 <div class="preview-split">
                     <div class="preview-item-half">
                         <label>🛍️ หน้าร้าน (SP):</label>
@@ -1452,7 +1622,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closePreviewModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="confirmProcess()">✅ ยืนยันและประมวลผล</button>
@@ -1462,14 +1631,13 @@
 
     <!-- ==================== WARNING MODAL ==================== -->
     <div class="modal" id="warningModal">
-        <div class="modal-content" style="border-top: 5px solid #f39c12; max-width: 650px;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">
+        <div class="modal-content" style="border-top: 3px solid var(--orange); max-width: 650px;">
+            <div class="modal-header" style="background: var(--orange);">
                 <h2>⚠️ คำเตือน: ข้อมูลไม่ตรงกัน</h2>
                 <button class="modal-close" onclick="closeWarningModal()">&times;</button>
             </div>
-
             <div class="modal-body">
-                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;" id="warningModalMessage">
+                <p style="color: #b45309; font-weight: 600; margin-bottom: 10px; font-size: 13px;" id="warningModalMessage">
                     พบข้อมูลในคอลัมน์ เบิก และ รับ (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:
                 </p>
                 <div class="warning-table-container">
@@ -1482,31 +1650,27 @@
                                 <th>รายการรับ</th>
                             </tr>
                         </thead>
-                        <tbody id="warningTableBody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
+                        <tbody id="warningTableBody"></tbody>
                     </table>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeWarningModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="continueToPreview()"
-                    style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+                    style="background: var(--orange);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
 
     <!-- ==================== RECEIVE PIECE WARNING MODAL ==================== -->
     <div class="modal" id="receiveWarningModal">
-        <div class="modal-content" style="border-top: 5px solid #e67e22; max-width: 650px;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">
+        <div class="modal-content" style="border-top: 3px solid #e67e22; max-width: 650px;">
+            <div class="modal-header" style="background: #e67e22;">
                 <h2>⚠️ คำเตือน: ข้อมูล RECEIVE_PIECE ไม่สมบูรณ์</h2>
                 <button class="modal-close" onclick="closeReceiveWarningModal()">&times;</button>
             </div>
-
             <div class="modal-body">
-                <p style="color: #d35400; font-weight: 600; margin-bottom: 10px;">
+                <p style="color: #b45309; font-weight: 600; margin-bottom: 10px; font-size: 13px;">
                     พบข้อมูล RECEIVE_PIECE > 0 แต่ RE_SKU_CODE เป็นค่าว่าง กรุณาตรวจสอบ:
                 </p>
                 <div class="warning-table-container">
@@ -1519,47 +1683,40 @@
                                 <th>RE_SKU_CODE</th>
                             </tr>
                         </thead>
-                        <tbody id="receiveWarningTableBody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
+                        <tbody id="receiveWarningTableBody"></tbody>
                     </table>
                 </div>
             </div>
-
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeReceiveWarningModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="continueFromReceiveToPreview()"
-                    style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);">ข้ามและดำเนินการต่อ</button>
+                    style="background: #e67e22;">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
 
     <!-- ==================== SHUTDOWN OVERLAY ==================== -->
     <div class="shutdown-overlay" id="shutdownOverlay">
-        <span style="font-size: 64px; margin-bottom: 10px;">🔴</span>
-        <h2 style="font-size: 26px; font-weight: 600; color: #e74c3c;">โปรแกรมปิดการทำงานชั่วคราว (OFF)</h2>
-        <p style="color: #ecf0f1; font-size: 16px; max-width: 500px; line-height: 1.6;">
+        <span style="font-size: 56px; margin-bottom: 8px;">🔴</span>
+        <h2 style="font-size: 22px; font-weight: 700; color: var(--red);">โปรแกรมปิดการทำงานชั่วคราว (OFF)</h2>
+        <p style="color: #d1d5db; font-size: 14px; max-width: 460px; line-height: 1.7;">
             ระบบได้ปล่อยและคืนค่าการใช้งานไฟล์ทั้งหมดแล้ว (ไฟล์ไม่ถูกล็อก)<br>
             คุณสามารถเปิดใช้งานระบบ Business Plus ได้ตามปกติ โดยไม่ต้องปิดหน้าต่างนี้<br>
-            <span style="color: #2ecc71; font-weight: bold; margin-top: 10px; display: block;">💡 เลื่อนสวิตช์มุมขวาบนกลับเป็น ON เพื่อเริ่มทำงานอีกครั้ง</span>
+            <span style="color: var(--green); font-weight: bold; margin-top: 8px; display: block;">💡 เลื่อนสวิตช์มุมขวาบนกลับเป็น ON เพื่อเริ่มทำงานอีกครั้ง</span>
         </p>
     </div>
 
     <!-- ==================== ERROR MODAL ==================== -->
     <div class="modal" id="errorModal">
-        <div class="modal-content" style="border-top: 5px solid #e74c3c;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+        <div class="modal-content" style="border-top: 3px solid var(--red);">
+            <div class="modal-header" style="background: var(--red);">
                 <h2>⚠️ พบข้อผิดพลาด</h2>
                 <button class="modal-close" onclick="closeErrorModal()">&times;</button>
             </div>
-
             <div class="modal-body">
-                <div style="color: #c0392b; font-size: 15px; font-weight: 500; white-space: pre-wrap;"
-                    id="errorModalMessage">
-                    -
-                </div>
+                <div style="color: var(--red); font-size: 14px; font-weight: 500; white-space: pre-wrap;"
+                    id="errorModalMessage">-</div>
             </div>
-
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeErrorModal()">ปิดหน้าต่าง</button>
             </div>
@@ -1570,6 +1727,12 @@
     <script src="code-data.js"></script>
     <script src="script.js"></script>
     <script>
+        // Header gear toggle
+        document.getElementById('headerGearBtn').addEventListener('click', function() {
+            const panel = document.getElementById('headerSettingsPanel');
+            panel.classList.toggle('open');
+        });
+
         // Sync branch name to summary when summary is shown
         const summaryObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
