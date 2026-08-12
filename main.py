@@ -96,6 +96,8 @@ def preview_excel_file(file_path: str) -> Dict:
         # 1. Clean Data like Save.ipynb
         if "RECEIVE_PIECE" in df.columns:
             df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
+            # กรองแถวที่ RECEIVE_PIECE == 0 ออก ก่อนการตรวจสอบอื่นๆ
+            df = df[~df["RECEIVE_PIECE"].isin([0, "0", 0.0])]
             
         # 1b. Validate RECEIVE_PIECE and RE_SKU_CODE
         receive_valid, receive_mismatches = validate_receive_piece(df)

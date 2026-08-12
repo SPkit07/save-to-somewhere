@@ -210,6 +210,12 @@ def process_excel_file(
             df = pd.read_excel(f)
         logger.info(f"Excel loaded: {df.shape[0]} rows, {df.shape[1]} columns")
         
+        # ===== 1b. Clean Data and Filter out RECEIVE_PIECE = 0 =====
+        if "RECEIVE_PIECE" in df.columns:
+            df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
+            df = df[~df["RECEIVE_PIECE"].isin([0, "0", 0.0])]
+            logger.info("🧹 กรองแถวที่ RECEIVE_PIECE == 0 ออกเรียบร้อยแล้ว")
+        
         # ===== 2. Validation like Save.ipynb =====
         if "1=SP,2=WH" in df.columns:
             if (df["1=SP,2=WH"] == 0).any():
@@ -236,10 +242,8 @@ def process_excel_file(
             })
             logger.warning(warning_msg)
                 
-        # ===== 3. Clean Data like Save.ipynb =====
-        if "RECEIVE_PIECE" in df.columns:
-            df.loc[df["RECEIVE_PIECE"] == 0, "ReBplus"] = np.nan
-            logger.info("🧹 เคลียร์ค่าว่างสำหรับแถวที่ RECEIVE_PIECE == 0 เรียบร้อยแล้ว")
+        # ===== 3. Clean Data like Save.ipynb (ทำเรียบร้อยแล้วในขั้นตอน 1b) =====
+        pass
             
         # Date Suffix
         now = datetime.now()
