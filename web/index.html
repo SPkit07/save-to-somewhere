@@ -7,7 +7,9 @@
     <title>Excel File Processor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
         /* ==================== RESET & BASE ==================== */
         * {
@@ -39,9 +41,9 @@
             --purple-light: #f5f3ff;
             --radius: 10px;
             --radius-lg: 14px;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --shadow-lg: 0 4px 12px rgba(0,0,0,0.07);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.07);
             --transition: 0.2s ease;
         }
 
@@ -130,7 +132,10 @@
         .slider {
             position: absolute;
             cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background-color: var(--red);
             transition: 0.3s;
         }
@@ -146,15 +151,15 @@
             transition: 0.3s;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: var(--green);
         }
 
-        input:focus + .slider {
+        input:focus+.slider {
             box-shadow: 0 0 1px var(--green);
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(20px);
         }
 
@@ -627,7 +632,7 @@
             overflow: hidden;
         }
 
-        details.settings-panel > summary {
+        details.settings-panel>summary {
             padding: 14px 20px;
             cursor: pointer;
             font-size: 13px;
@@ -641,27 +646,27 @@
             user-select: none;
         }
 
-        details.settings-panel > summary::-webkit-details-marker {
+        details.settings-panel>summary::-webkit-details-marker {
             display: none;
         }
 
-        details.settings-panel > summary::before {
+        details.settings-panel>summary::before {
             content: "▸";
             font-size: 11px;
             transition: transform 0.2s ease;
             color: var(--text-muted);
         }
 
-        details.settings-panel[open] > summary::before {
+        details.settings-panel[open]>summary::before {
             transform: rotate(90deg);
         }
 
-        details.settings-panel > summary:hover {
+        details.settings-panel>summary:hover {
             color: var(--text);
             background: var(--surface-alt);
         }
 
-        details.settings-panel > .details-content {
+        details.settings-panel>.details-content {
             padding: 0 20px 20px 20px;
         }
 
@@ -745,8 +750,13 @@
             font-weight: 800;
         }
 
-        .sp-wh-count.green { color: var(--green); }
-        .sp-wh-count.red { color: var(--red); }
+        .sp-wh-count.green {
+            color: var(--green);
+        }
+
+        .sp-wh-count.red {
+            color: var(--red);
+        }
 
         /* ==================== SCROLLBAR ==================== */
         .right-section::-webkit-scrollbar {
@@ -770,8 +780,10 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-color: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(4px);
             z-index: 1000;
@@ -1000,7 +1012,8 @@
         .autocomplete-dropdown {
             position: absolute;
             top: calc(100% + 4px);
-            left: 0; right: 0;
+            left: 0;
+            right: 0;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -1017,8 +1030,15 @@
         }
 
         @keyframes dropdownSlide {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .autocomplete-item {
@@ -1179,8 +1199,10 @@
         .shutdown-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
@@ -1203,7 +1225,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -1262,6 +1286,7 @@
         }
 
         @media (max-width: 480px) {
+
             .path-input-group>div[style*="display: flex"],
             .save-path-item .sp-input-row {
                 flex-direction: column;
@@ -1338,8 +1363,7 @@
                 <button class="refresh-exe-btn" id="refreshExeBtn" title="รีเฟรชรายการ .exe">🔄</button>
             </div>
             <div class="custom-path-container">
-                <input type="text" id="customExePath" class="custom-path-input"
-                    placeholder="หรือป้อน path ของไฟล์ .exe"
+                <input type="text" id="customExePath" class="custom-path-input" placeholder="หรือป้อน path ของไฟล์ .exe"
                     title="ป้อน path เต็มของไฟล์ .exe เช่น C:\path\to\program.exe">
                 <button class="browse-exe-btn" id="browseExeBtn" title="เรียกดู">📁</button>
             </div>
@@ -1349,8 +1373,10 @@
     <!-- ==================== TABS ==================== -->
     <div class="tabs-container">
         <button class="tab-button active" id="tabBtnProcessor" onclick="switchTab('processor')">📊 โปรแกรมหลัก</button>
-        <button class="tab-button bill-tab-btn" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅 ส่งไฟล์ IB</button>
+        <button class="tab-button bill-tab-btn" id="tabBtnBillProcessor" onclick="switchTab('bill-processor')">📅
+            ส่งไฟล์ IB</button>
         <button class="tab-button" id="tabBtnCode" onclick="switchTab('code')">🧩 โค้ด</button>
+        <button class="tab-button" id="tabBtnAiStock" onclick="switchTab('ai-stock')">🤖 วิเคราะห์สต็อก 📦</button>
     </div>
 
     <!-- ==================== TAB 1: Excel Processor ==================== -->
@@ -1395,7 +1421,9 @@
                     </div>
                     <div class="summary-card full-width">
                         <div class="summary-card-label">📁 ชื่อไฟล์ที่เซฟ</div>
-                        <div id="summaryFileName" style="font-size: 13px; color: var(--text); word-break: break-all; font-family: 'IBM Plex Mono', monospace;">-</div>
+                        <div id="summaryFileName"
+                            style="font-size: 13px; color: var(--text); word-break: break-all; font-family: 'IBM Plex Mono', monospace;">
+                            -</div>
                     </div>
                     <div class="summary-card full-width">
                         <div class="sp-wh-row">
@@ -1451,8 +1479,8 @@
                 </div>
             </div>
 
-            <button class="save-btn" id="runBillBtn"
-                style="background: var(--purple); margin-top: 0;">🚀 เริ่มประมวลผลบิล</button>
+            <button class="save-btn" id="runBillBtn" style="background: var(--purple); margin-top: 0;">🚀
+                เริ่มประมวลผลบิล</button>
         </div>
 
         <!-- Status & Result -->
@@ -1488,8 +1516,7 @@
                         <div class="path-input-group">
                             <label class="path-label">📂 part_b (Google Drive SP)</label>
                             <div style="display: flex; gap: 8px;">
-                                <input type="text" id="partBInput" class="path-input"
-                                    placeholder="เลือกโฟลเดอร์ SP">
+                                <input type="text" id="partBInput" class="path-input" placeholder="เลือกโฟลเดอร์ SP">
                                 <button class="browse-btn" id="browsePartBBtn"
                                     style="white-space: nowrap; padding: 9px 14px;">เลือกโฟลเดอร์</button>
                             </div>
@@ -1545,45 +1572,116 @@
                         </div>
                     </div>
 
-                    <button class="save-btn" id="saveBillPathsBtn"
-                        style="background: var(--purple);">💾 บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
+                    <button class="save-btn" id="saveBillPathsBtn" style="background: var(--purple);">💾
+                        บันทึกการตั้งค่าทั้งหมด (หน้าที่สอง)</button>
                 </div>
             </div>
         </details>
     </div>
 
-    <!-- ==================== TAB 3: Code snippets ==================== -->
+    <!-- ==================== TAB 4: AI Stock ==================== -->
+    <div id="tab-ai-stock" class="tab-content container">
+        <div class="left-section">
+            <div class="branch-display">
+                <h2>ตรวจพบสาขา</h2>
+                <div class="branch-name" id="aiBranchName">-</div>
+                <div class="branch-code" id="aiBranchCode">ยังไม่มีการเลือกไฟล์รับเข้า</div>
+            </div>
+
+            <div class="dropzone" id="aiReceiveDropzone">
+                <div class="dropzone-icon">📥</div>
+                <div class="dropzone-text">
+                    <h3 id="aiReceiveFileName">ลากไฟล์รับเข้า (เหมือนหน้าแรก) มาปล่อยที่นี่</h3>
+                    <p>เพื่อตรวจสอบสาขาและหาข้อมูลใหม่</p>
+                </div>
+                <input type="file" id="aiReceiveFileInput" class="file-input" accept=".xlsx, .xls">
+                <button class="browse-btn"
+                    onclick="document.getElementById('aiReceiveFileInput').click()">เลือกไฟล์รับเข้า</button>
+            </div>
+
+            <div
+                style="margin-top: 20px; background: var(--surface-alt); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <h3 style="margin-top:0; margin-bottom:10px; font-size: 14px; color: var(--text-secondary);">
+                    ตั้งค่าโฟลเดอร์สต็อกการ์ด</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+                    ระบุโฟลเดอร์ที่เก็บไฟล์สต็อกการ์ด (เช่น K1, K2, 11) ของทุกสาขา ระบบจะค้นหาและดึงไฟล์มาคำนวณอัตโนมัติ
+                </p>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="aiStockFolderInput" class="custom-path-input"
+                        placeholder="ตัวอย่าง: C:\Users\USER\Desktop\StockCards" style="flex:1;">
+                    <button class="browse-btn" id="browseAiStockFolderBtn">📁 เลือกโฟลเดอร์</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <h2>ผลวิเคราะห์ (Outlier)</h2>
+            <div id="aiStatusMessage" class="status-message" style="margin-bottom:15px;">
+                <span class="status-icon" id="aiStatusIcon">⏳</span>
+                <span class="status-text" id="aiStatusText">กำลังประมวลผล...</span>
+            </div>
+
+            <button id="processAiBtn" class="save-btn" style="margin-bottom: 20px;">ประมวลผล Robust Zscore</button>
+
+            <div id="aiResultsTableContainer" style="display:none; overflow-x:auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: var(--surface-alt); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border);">
+                                ชื่อสินค้า</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border);">
+                                จำนวนล่าสุดที่นำเข้าไป</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border);">ค่า
+                                Robust Zscore</th>
+                            <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border);">Expect
+                                Import</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aiResultsTbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 3: Code Content ==================== -->
     <div id="tab-code" class="tab-content" style="display:none; max-width:1400px; margin:0 auto; width:100%;">
         <div style="min-width:0; width:100%;">
-            <div class="card" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div class="card"
+                style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
-                    <h2 style="color: var(--text); font-size: 14px; margin-bottom: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🧩 โค้ดตัวอย่าง</h2>
+                    <h2
+                        style="color: var(--text); font-size: 14px; margin-bottom: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                        🧩 โค้ดตัวอย่าง</h2>
                     <p style="color: var(--text-secondary); font-size: 12px;">แต่ละบล็อคมีปุ่มคัดลอก</p>
                 </div>
                 <button id="addCustomScriptBtn"
-                    style="background: var(--green); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: var(--transition);">＋ เพิ่มสคริปต์ใหม่</button>
+                    style="background: var(--green); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: var(--transition);">＋
+                    เพิ่มสคริปต์ใหม่</button>
             </div>
 
             <!-- Custom script creation form -->
             <div id="customScriptForm"
                 style="display: none; max-width: 500px; margin: 12px auto 0 auto; background: var(--surface); border-radius: var(--radius-lg); padding: 16px; border: 1px solid var(--green); flex-direction: column; gap: 10px; width: 100%;">
-                <h3 style="margin: 0; font-size: 13px; color: var(--text); font-weight: 700;">✍️ เพิ่มสคริปต์ส่วนตัว</h3>
+                <h3 style="margin: 0; font-size: 13px; color: var(--text); font-weight: 700;">✍️ เพิ่มสคริปต์ส่วนตัว
+                </h3>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">ชื่ออธิบายสคริปต์</label>
+                    <label
+                        style="font-size: 11px; font-weight: 600; color: var(--text-muted);">ชื่ออธิบายสคริปต์</label>
                     <input type="text" id="customScriptTitle" placeholder="เช่น กรองข้อมูลบางอย่าง, ล้างตาราง"
                         style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">โค้ดสคริปต์</label>
-                    <textarea id="customScriptCode" rows="4"
-                        placeholder="วางโค้ด JavaScript ของคุณที่นี่..."
+                    <textarea id="customScriptCode" rows="4" placeholder="วางโค้ด JavaScript ของคุณที่นี่..."
                         style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; resize: vertical;"></textarea>
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px;">
                     <button id="cancelCustomScriptBtn"
                         style="background: var(--surface-alt); color: var(--text-secondary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">ยกเลิก</button>
                     <button id="saveCustomScriptBtn"
-                        style="background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">💾 บันทึกสคริปต์</button>
+                        style="background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">💾
+                        บันทึกสคริปต์</button>
                 </div>
             </div>
 
@@ -1637,7 +1735,8 @@
                 <button class="modal-close" onclick="closeWarningModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="color: #b45309; font-weight: 600; margin-bottom: 10px; font-size: 13px;" id="warningModalMessage">
+                <p style="color: #b45309; font-weight: 600; margin-bottom: 10px; font-size: 13px;"
+                    id="warningModalMessage">
                     พบข้อมูลในคอลัมน์ เบิก และ รับ (1=SP,2=WH) ไม่ตรงกัน กรุณาตรวจสอบ:
                 </p>
                 <div class="warning-table-container">
@@ -1702,7 +1801,8 @@
         <p style="color: #d1d5db; font-size: 14px; max-width: 460px; line-height: 1.7;">
             ระบบได้ปล่อยและคืนค่าการใช้งานไฟล์ทั้งหมดแล้ว (ไฟล์ไม่ถูกล็อก)<br>
             คุณสามารถเปิดใช้งานระบบ Business Plus ได้ตามปกติ โดยไม่ต้องปิดหน้าต่างนี้<br>
-            <span style="color: var(--green); font-weight: bold; margin-top: 8px; display: block;">💡 เลื่อนสวิตช์มุมขวาบนกลับเป็น ON เพื่อเริ่มทำงานอีกครั้ง</span>
+            <span style="color: var(--green); font-weight: bold; margin-top: 8px; display: block;">💡
+                เลื่อนสวิตช์มุมขวาบนกลับเป็น ON เพื่อเริ่มทำงานอีกครั้ง</span>
         </p>
     </div>
 
@@ -1726,9 +1826,10 @@
     <script src="/eel.js"></script>
     <script src="code-data.js"></script>
     <script src="script.js"></script>
+    <script src="ai_stock.js"></script>
     <script>
         // Header gear toggle
-        document.getElementById('headerGearBtn').addEventListener('click', function() {
+        document.getElementById('headerGearBtn').addEventListener('click', function () {
             const panel = document.getElementById('headerSettingsPanel');
             panel.classList.toggle('open');
         });

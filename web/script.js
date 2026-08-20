@@ -742,7 +742,8 @@ function switchTab(tabName) {
     const tabBtnMap = {
         'processor': 'tabBtnProcessor',
         'bill-processor': 'tabBtnBillProcessor',
-        'code': 'tabBtnCode'
+        'code': 'tabBtnCode',
+        'ai-stock': 'tabBtnAiStock'
     };
     const activeBtn = document.getElementById(tabBtnMap[tabName]);
     if (activeBtn) {

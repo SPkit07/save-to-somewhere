@@ -150,7 +150,7 @@ document.querySelectorAll('table tbody tr').forEach(row => {
 });
 
 //---------------------------------------------------------------------------------------------------------------
-//มีรับไม่มีเบิก
+มีรับไม่มีเบิก
 document.querySelectorAll('tr[class*="drow"]').forEach(tr => {
     // ดึง dropdown สองตัวในแถว (ตัวแรก = บาร์โค้ดเบิก, ตัวที่สอง = บาร์โค้ดรับ)
     const selects = tr.querySelectorAll('select');

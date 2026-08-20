@@ -275,6 +275,69 @@ def process_file_from_desktop(file_path: str, paths_config: Dict[str, str]) -> D
 
 
 @eel.expose
+def preview_receive_for_ai(file_path: str) -> Dict:
+    """Preview Receiving file for AI, skip J/K filtering, just get branch"""
+    try:
+        import pandas as pd
+        if not os.path.exists(file_path):
+            return {"success": False, "message": "ไฟล์ไม่พบ"}
+            
+        df = pd.read_excel(file_path)
+        if "ReBplus" not in df.columns:
+            return {"success": False, "message": "ไฟล์ไม่มีคอลัมน์ ReBplus"}
+            
+        sku_str = df["ReBplus"].astype(str).str.strip()
+        extracted_code = sku_str.str.split(",").str.get(2).str.strip()
+        
+        branch_codes = extracted_code.unique()
+        detected_branch = None
+        for code in ["11", "21", "31", "41", "51"]:
+            if code in branch_codes:
+                detected_branch = code
+                break
+        if not detected_branch and "00" in branch_codes:
+            detected_branch = "SP"
+            
+        branch_name = BRANCH_NAMES.get(detected_branch, "Unknown") if detected_branch else "ไม่พบ"
+        
+        return {
+            "success": True,
+            "detected_branch": detected_branch,
+            "branch_name": branch_name,
+            "file_name": os.path.basename(file_path)
+        }
+    except Exception as e:
+        logger.error(f"Error in preview_receive_for_ai: {e}", exc_info=True)
+        return {"success": False, "message": str(e)}
+
+@eel.expose
+def process_ai_stock_from_desktop(receive_path: str, stock_card_folder: str, branch_code: str) -> Dict:
+    """Run AI Stock processing using robust_ai.py"""
+    try:
+        from robust_ai import process_ai_stock
+        logger.info(f"Processing AI Stock: Receive={receive_path}, Folder={stock_card_folder}, Branch={branch_code}")
+        result = process_ai_stock(receive_path, stock_card_folder, branch_code)
+        return result
+    except Exception as e:
+        logger.error(f"Error in process_ai_stock_from_desktop: {e}", exc_info=True)
+        return {"success": False, "message": str(e)}
+
+@eel.expose
+def select_folder_dialog():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.wm_attributes('-topmost', 1)
+        folder_path = filedialog.askdirectory(parent=root, title="เลือกโฟลเดอร์เก็บสต็อกการ์ด")
+        return folder_path if folder_path else ""
+    except Exception as e:
+        logger.error(f"Error in select_folder_dialog: {e}", exc_info=True)
+        return ""
+
+
+@eel.expose
 def get_branch_config() -> Dict:
     """ส่งข้อมูล Branch ให้ Frontend"""
     return {
