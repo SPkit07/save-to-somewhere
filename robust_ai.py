@@ -3,11 +3,13 @@ import numpy as np
 import datetime
 import math
 import os
+import re
+from rapidfuzz import process, fuzz
 
 from logger import logger
 
 STRICT_IMPORT_BILL_PREFIXES = ('DM', 'IBK', 'IB')
-OUTLIER_Z_THRESHOLD = 3.0
+OUTLIER_Z_THRESHOLD = 3
 NORMAL_CYCLE_MULTIPLIER = 1.5
 FLOAT_TOLERANCE = 1e-9
 
@@ -17,6 +19,15 @@ def _round_positive_qty_series(values):
     valid = numeric.notna() & np.isfinite(numeric) & (numeric > 0)
     result.loc[valid] = np.floor(numeric.loc[valid] + 0.5)
     return result
+
+def clean_series(series):
+    return (
+        series.fillna("")
+        .astype(str)
+        .str.lower()
+        .str.replace(r"[^\w\s]", "", regex=True)
+        .str.strip()
+    )
 
 def compute_robust_iqr_zscore_import_fast(df_filtered, col='import'):
     group_cols = ['product_id']
@@ -173,6 +184,45 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         # Aggregate by SKU_NAME
         grouped_recv = recv_df.groupby(prod_name_col)['RECEIVE_PIECE'].sum().reset_index()
         grouped_recv.rename(columns={prod_name_col: 'product_id', 'RECEIVE_PIECE': 'import'}, inplace=True)
+        
+        # ==========================================
+        # 2.5 Fuzzy Match Receive Products to Stock Card Products
+        # ==========================================
+        THRESHOLD = 80
+        stock_unique_products = data['product_id'].dropna().unique()
+        
+        # Clean both lists for matching
+        stock_clean = clean_series(pd.Series(stock_unique_products)).values
+        
+        # Create mapping from clean string to original stock product name
+        clean_to_orig = {clean_val: orig_val for clean_val, orig_val in zip(stock_clean, stock_unique_products) if clean_val}
+        choices = {i: val for i, val in enumerate(clean_to_orig.keys())}
+        
+        recv_products = grouped_recv['product_id'].unique()
+        recv_clean = clean_series(pd.Series(recv_products)).values
+        
+        mapped_products = {}
+        for orig_recv, clean_recv in zip(recv_products, recv_clean):
+            if not clean_recv:
+                mapped_products[orig_recv] = orig_recv
+                continue
+                
+            result = process.extractOne(
+                clean_recv,
+                choices,
+                scorer=fuzz.WRatio,
+                score_cutoff=THRESHOLD
+            )
+            
+            if result is not None:
+                matched_clean = result[0]
+                matched_orig = clean_to_orig[matched_clean]
+                mapped_products[orig_recv] = matched_orig
+            else:
+                mapped_products[orig_recv] = orig_recv
+                
+        # Apply the mapping so new entries use the exact stock card name if they match
+        grouped_recv['product_id'] = grouped_recv['product_id'].map(mapped_products).fillna(grouped_recv['product_id'])
         
         # Format as new data rows
         today = pd.to_datetime(datetime.datetime.now().date())
