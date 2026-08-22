@@ -5,7 +5,8 @@ import math
 import os
 import re
 from rapidfuzz import process, fuzz
-
+from sklearn.ensemble import IsolationForest
+import xgboost as xgb
 from logger import logger
 
 STRICT_IMPORT_BILL_PREFIXES = ('DM', 'IBK', 'IB')
@@ -21,47 +22,66 @@ def _round_positive_qty_series(values):
     return result
 
 def clean_series(series):
-    return (
-        series.fillna("")
-        .astype(str)
-        .str.lower()
-        .str.replace(r"[^\w\s]", "", regex=True)
-        .str.strip()
-    )
+    def process_text(text):
+        if not isinstance(text, str):
+            text = str(text) if pd.notna(text) else ""
+        text = text.lower()
+        
+        # Evaluate math like 6*4 or 6x4 to 24
+        text = re.sub(r'(\d+)\s*[\*xX]\s*(\d+)', lambda m: str(int(m.group(1)) * int(m.group(2))), text)
+        
+        # Remove common Thai unit words that mess up matching
+        text = re.sub(r'(แผง|แพ็ค|แพค|กล่อง|โหล|ลัง|ขวด|อัน|ชิ้น|ซอง|มัด)\s*', '', text)
+        
+        # Remove punctuation
+        text = re.sub(r'[^\w\s]', '', text)
+        
+        # Reduce multiple spaces to single space
+        text = re.sub(r'\s+', ' ', text)
+        
+        return text.strip()
 
-def compute_robust_iqr_zscore_import_fast(df_filtered, col='import'):
+    return series.apply(process_text)
+
+def compute_isolation_forest_outliers(df_filtered, col='import'):
     group_cols = ['product_id']
     if 'unit' in df_filtered.columns:
         group_cols.append('unit')
+        
+    group_median = df_filtered.groupby(group_cols)[col].transform('median')
+    
+    # Create ratio feature
+    ratio = df_filtered[col] / (group_median + 1e-9)
+    X = pd.DataFrame({'val': df_filtered[col], 'ratio': ratio})
+    
+    # Fit Isolation Forest
+    iso = IsolationForest(contamination='auto', random_state=42)
+    iso.fit(X)
+    
+    # Negative score_samples gives higher anomaly score for outliers
+    scores = -iso.score_samples(X)
+    labels = iso.predict(X) # -1 for outlier, 1 for inlier
+    
+    return scores, labels, group_median
 
-    grouped = df_filtered.groupby(group_cols)[col]
-
-    group_median = grouped.transform('median')
-    group_count = grouped.transform('count')
-
-    q1 = grouped.transform('quantile', 0.25)
-    q3 = grouped.transform('quantile', 0.75)
-    iqr_scaled = (q3 - q1) * 0.7413
-
-    mad_raw = (
-        (df_filtered[col] - group_median)
-        .abs()
-        .groupby([df_filtered[c] for c in group_cols])
-        .transform('median')
-    )
-    mad_scaled = mad_raw * 1.4826
-
-    min_divisor = np.maximum(group_median * 0.3, 1.0)
-
-    final_divisor = np.where(
-        (iqr_scaled > 0) & (group_count >= 10), iqr_scaled, mad_scaled
-    )
-    final_divisor = np.maximum(final_divisor, min_divisor)
-
-    diff = df_filtered[col] - group_median
-    z_score = diff / final_divisor
-
-    return z_score, group_median
+def compute_xgboost_expected_import(df_filtered, col='import'):
+    df = df_filtered.copy()
+    group_cols = ['product_id']
+    if 'unit' in df.columns:
+        group_cols.append('unit')
+        
+    df['import_lag1'] = df.groupby(group_cols)[col].shift(1).fillna(0)
+    df['import_lag2'] = df.groupby(group_cols)[col].shift(2).fillna(0)
+    df['import_lag3'] = df.groupby(group_cols)[col].shift(3).fillna(0)
+    
+    X = df[['import_lag1', 'import_lag2', 'import_lag3']]
+    y = df[col]
+    
+    model = xgb.XGBRegressor(n_estimators=100, max_depth=3, random_state=42)
+    model.fit(X, y)
+    
+    expected = model.predict(X)
+    return pd.Series(expected, index=df.index)
 
 def find_stock_card_file(folder_path: str, branch_code: str) -> str:
     if not os.path.exists(folder_path):
@@ -188,7 +208,7 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         # ==========================================
         # 2.5 Fuzzy Match Receive Products to Stock Card Products
         # ==========================================
-        THRESHOLD = 80
+        THRESHOLD = 90
         stock_unique_products = data['product_id'].dropna().unique()
         
         # Clean both lists for matching
@@ -210,7 +230,7 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
             result = process.extractOne(
                 clean_recv,
                 choices,
-                scorer=fuzz.WRatio,
+                scorer=fuzz.ratio,
                 score_cutoff=THRESHOLD
             )
             
@@ -264,40 +284,28 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         df_imp = df[df['is_valid_import_bill'] & (df['import'] > 0)].copy()
 
         df['Expected_Import'] = np.nan
-        df['ZScore_Import'] = np.nan
+        df['Isolation_Score'] = np.nan
         df['is_outlier_import'] = False
 
         if not df_imp.empty:
-            df_imp['ZScore_Import'], df_imp['_median_import'] = compute_robust_iqr_zscore_import_fast(df_imp, 'import')
+            df_imp['Isolation_Score'], df_imp['_iso_label'], df_imp['_median_import'] = compute_isolation_forest_outliers(df_imp, 'import')
             df_imp['is_outlier_import'] = (
-                (df_imp['ZScore_Import'] > OUTLIER_Z_THRESHOLD)
+                (df_imp['_iso_label'] == -1)
                 & ((df_imp['import'] - df_imp['_median_import']) >= 5)
             )
-            df.loc[df_imp.index, 'ZScore_Import'] = df_imp['ZScore_Import']
+            df.loc[df_imp.index, 'Isolation_Score'] = df_imp['Isolation_Score']
             df.loc[df_imp.index, 'is_outlier_import'] = df_imp['is_outlier_import']
 
-        # EWMA Prediction
-        df['_ewma_expected'] = np.nan
+        # XGBoost Prediction
+        df['_xgb_expected'] = np.nan
         valid_mask = df['import'] > 0
         valid_df = df.loc[valid_mask, ['product_id', 'unit', 'import']].copy()
 
         if not valid_df.empty:
-            valid_counts = valid_df.groupby(['product_id', 'unit'])['import'].transform('count')
-            valid_df['dynamic_span'] = np.clip(valid_counts // 2, 3, 10)
-            
-            ewma_results = []
-            for span_val in range(3, 11):
-                span_subset = valid_df[valid_df['dynamic_span'] == span_val]
-                if not span_subset.empty:
-                    span_ewma = span_subset.groupby(['product_id', 'unit'])['import'].ewm(span=span_val, min_periods=1).mean()
-                    span_ewma = span_ewma.reset_index(level=[0, 1], drop=True)
-                    ewma_results.append(span_ewma)
-            if ewma_results:
-                all_ewma = pd.concat(ewma_results)
-                df.loc[all_ewma.index, '_ewma_expected'] = all_ewma
+            df.loc[valid_mask, '_xgb_expected'] = compute_xgboost_expected_import(valid_df, 'import')
 
-        df['_ewma_expected'] = df.groupby(['product_id', 'unit'])['_ewma_expected'].ffill().bfill()
-        df['Expected_Import'] = np.where(df['import'] > 0, df['_ewma_expected'], np.nan)
+        df['_xgb_expected'] = df.groupby(['product_id', 'unit'])['_xgb_expected'].ffill().bfill()
+        df['Expected_Import'] = np.where(df['import'] > 0, df['_xgb_expected'], np.nan)
         
         expected_mask = (df['import'] > 0) & df['Expected_Import'].notna()
         df.loc[expected_mask, 'Expected_Import'] = _round_positive_qty_series(df.loc[expected_mask, 'Expected_Import'])
@@ -310,18 +318,18 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         outliers_only = new_entries[new_entries['is_outlier_import'] == True]
         
         # Format output
-        output_df = outliers_only[['product_id', 'import', 'ZScore_Import', 'Expected_Import']].copy()
+        output_df = outliers_only[['product_id', 'import', 'Isolation_Score', 'Expected_Import']].copy()
         output_df.rename(columns={
             'product_id': 'ชื่อสินค้า',
             'import': 'จำนวนล่าสุดที่นำเข้าไป',
-            'ZScore_Import': 'ค่า Robust Zscore',
+            'Isolation_Score': 'ค่า Isolation Score',
             'Expected_Import': 'Expect Import'
         }, inplace=True)
         
-        output_df['ค่า Robust Zscore'] = output_df['ค่า Robust Zscore'].round(2)
+        output_df['ค่า Isolation Score'] = output_df['ค่า Isolation Score'].round(4)
         
-        # Sort by Robust Zscore descending (highest anomaly first)
-        output_df = output_df.sort_values(by='ค่า Robust Zscore', ascending=False)
+        # Sort by Isolation Score descending (highest anomaly first)
+        output_df = output_df.sort_values(by='ค่า Isolation Score', ascending=False)
         
         records = output_df.to_dict(orient='records')
         

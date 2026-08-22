@@ -3,8 +3,10 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [('web', 'web')]
 binaries = []
-hiddenimports = ['pandas', 'numpy', 'openpyxl', 'eel']
+hiddenimports = ['pandas', 'numpy', 'openpyxl', 'eel', 'sklearn', 'xgboost', 'scipy._external.array_api_compat.numpy.fft', 'scipy._lib.array_api_compat.numpy.fft', 'scipy.special.cython_special']
 tmp_ret = collect_all('eel')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('xgboost')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
@@ -17,7 +19,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['matplotlib', 'scipy', 'PIL', 'pytest', 'IPython', 'jupyter'],
+    excludes=['matplotlib', 'PIL', 'pytest', 'IPython', 'jupyter'],
     noarchive=False,
     optimize=0,
 )

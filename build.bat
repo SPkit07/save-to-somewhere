@@ -158,6 +158,7 @@ if exist "venv\Scripts\python.exe" (
 echo.
 echo - Installing build dependencies...
 %PIP_CMD% install eel pyinstaller --quiet
+%PIP_CMD% install -r requirements.txt --quiet
 
 echo.
 echo - Checking web files...
@@ -196,9 +197,14 @@ echo.
     --hidden-import=numpy ^
     --hidden-import=openpyxl ^
     --hidden-import=eel ^
+    --hidden-import=sklearn ^
+    --hidden-import=xgboost ^
+    --hidden-import=scipy._external.array_api_compat.numpy.fft ^
+    --hidden-import=scipy._lib.array_api_compat.numpy.fft ^
+    --hidden-import=scipy.special.cython_special ^
     --collect-all=eel ^
+    --collect-all=xgboost ^
     --exclude-module=matplotlib ^
-    --exclude-module=scipy ^
     --exclude-module=PIL ^
     --exclude-module=pytest ^
     --exclude-module=IPython ^

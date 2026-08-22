@@ -179,9 +179,9 @@ if (processAiBtn) {
                 }
                 showAiStatus(statusMsg, 'success');
                 
-                // Sort by Robust Zscore descending
+                // Sort by Isolation Score descending
                 const sortedData = (result.data || []).slice().sort((a, b) => {
-                    return (b["ค่า Robust Zscore"] || 0) - (a["ค่า Robust Zscore"] || 0);
+                    return (b["ค่า Isolation Score"] || 0) - (a["ค่า Isolation Score"] || 0);
                 });
                 renderAiResults(sortedData);
             } else {
@@ -206,7 +206,7 @@ function renderAiResults(data) {
             
             let html = `<td style="padding: 10px;">${item["ชื่อสินค้า"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["จำนวนล่าสุดที่นำเข้าไป"]}</td>`;
-            html += `<td style="padding: 10px; text-align: right;">${item["ค่า Robust Zscore"]}</td>`;
+            html += `<td style="padding: 10px; text-align: right;">${item["ค่า Isolation Score"]}</td>`;
             html += `<td style="padding: 10px; text-align: right; font-weight:bold; color:var(--accent);">${item["Expect Import"]}</td>`;
             
             row.innerHTML = html;
