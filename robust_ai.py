@@ -64,7 +64,7 @@ def compute_isolation_forest_outliers(df_filtered, col='import'):
     
     return scores, labels, group_median
 
-def compute_xgboost_expected_import(df_filtered, col='import'):
+def compute_xgboost_expected_import(df_filtered, col='import', is_new_col=None):
     df = df_filtered.copy()
     group_cols = ['product_id']
     if 'unit' in df.columns:
@@ -78,7 +78,15 @@ def compute_xgboost_expected_import(df_filtered, col='import'):
     y = df[col]
     
     model = xgb.XGBRegressor(n_estimators=100, max_depth=3, random_state=42)
-    model.fit(X, y)
+    
+    if is_new_col is not None and is_new_col in df.columns:
+        train_mask = ~df[is_new_col].astype(bool)
+        if train_mask.sum() >= 1:
+            model.fit(X[train_mask], y[train_mask])
+        else:
+            return pd.Series(np.nan, index=df.index)
+    else:
+        model.fit(X, y)
     
     expected = model.predict(X)
     return pd.Series(expected, index=df.index)
@@ -199,10 +207,18 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
             prod_name_col = recv_df.columns[5]
             
         recv_df["RECEIVE_PIECE"] = pd.to_numeric(recv_df["RECEIVE_PIECE"], errors='coerce').fillna(0)
+        
+        if "EXPORT_PIECE" in recv_df.columns:
+            recv_df["EXPORT_PIECE"] = pd.to_numeric(recv_df["EXPORT_PIECE"], errors='coerce').fillna(0)
+            recv_df["is_mismatch"] = recv_df["RECEIVE_PIECE"] != recv_df["EXPORT_PIECE"]
+        else:
+            recv_df["is_mismatch"] = False
+            
         recv_df = recv_df[recv_df["RECEIVE_PIECE"] > 0]
         
         # Aggregate by SKU_NAME
-        grouped_recv = recv_df.groupby(prod_name_col)['RECEIVE_PIECE'].sum().reset_index()
+        agg_dict = {'RECEIVE_PIECE': 'sum', 'is_mismatch': 'any'}
+        grouped_recv = recv_df.groupby(prod_name_col).agg(agg_dict).reset_index()
         grouped_recv.rename(columns={prod_name_col: 'product_id', 'RECEIVE_PIECE': 'import'}, inplace=True)
         
         # ==========================================
@@ -264,7 +280,13 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         # ==========================================
         source = combined_df.copy()
         required_columns = ['DATE', 'Bill', 'details', 'product_id', 'import', 'export', 'balances', 'is_new_entry']
+        if 'is_mismatch' in source.columns:
+            required_columns.append('is_mismatch')
         df = source[required_columns + (['unit'] if 'unit' in source.columns else [])].copy()
+        if 'is_mismatch' not in df.columns:
+            df['is_mismatch'] = False
+        else:
+            df['is_mismatch'] = df['is_mismatch'].fillna(False)
 
         df['product_id'] = df['product_id'].astype(str).str.strip()
         df['Bill'] = df['Bill'].astype(str).str.strip()
@@ -285,24 +307,56 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
 
         df['Expected_Import'] = np.nan
         df['Isolation_Score'] = np.nan
+        df['Robust_ZScore'] = np.nan
+        df['Median_dynamic'] = np.nan
+        df['MAD_dynamic'] = np.nan
+        df['IQR_dynamic'] = np.nan
         df['is_outlier_import'] = False
 
         if not df_imp.empty:
             df_imp['Isolation_Score'], df_imp['_iso_label'], df_imp['_median_import'] = compute_isolation_forest_outliers(df_imp, 'import')
+            
+            # --- Dynamic IQR, MAD, Median, and Robust Z-Score per product ---
+            group_cols = ['product_id', 'unit']
+            # Median
+            df_imp['Median_dynamic'] = df_imp.groupby(group_cols)['import'].transform('median')
+            
+            # MAD
+            abs_dev = (df_imp['import'] - df_imp['Median_dynamic']).abs()
+            df_imp['MAD_dynamic'] = abs_dev.groupby([df_imp['product_id'], df_imp['unit']]).transform('median')
+            
+            # IQR
+            q75 = df_imp.groupby(group_cols)['import'].transform(lambda x: x.quantile(0.75))
+            q25 = df_imp.groupby(group_cols)['import'].transform(lambda x: x.quantile(0.25))
+            df_imp['IQR_dynamic'] = q75 - q25
+            
+            # Robust Z-Score Calculation
+            # Fallback if MAD is 0 -> use IQR/1.349, if still 0 -> use 1.0
+            mad_adj = df_imp['MAD_dynamic'].replace(0, np.nan)
+            mad_adj = mad_adj.fillna(df_imp['IQR_dynamic'] / 1.349)
+            mad_adj = mad_adj.replace(0, np.nan).fillna(1.0)
+            
+            df_imp['Robust_ZScore'] = 0.6745 * (df_imp['import'] - df_imp['Median_dynamic']) / mad_adj
+            # ----------------------------------------------------------------
+
             df_imp['is_outlier_import'] = (
                 (df_imp['_iso_label'] == -1)
                 & ((df_imp['import'] - df_imp['_median_import']) >= 5)
             )
             df.loc[df_imp.index, 'Isolation_Score'] = df_imp['Isolation_Score']
+            df.loc[df_imp.index, 'Robust_ZScore'] = df_imp['Robust_ZScore']
+            df.loc[df_imp.index, 'Median_dynamic'] = df_imp['Median_dynamic']
+            df.loc[df_imp.index, 'MAD_dynamic'] = df_imp['MAD_dynamic']
+            df.loc[df_imp.index, 'IQR_dynamic'] = df_imp['IQR_dynamic']
             df.loc[df_imp.index, 'is_outlier_import'] = df_imp['is_outlier_import']
 
         # XGBoost Prediction
         df['_xgb_expected'] = np.nan
         valid_mask = df['import'] > 0
-        valid_df = df.loc[valid_mask, ['product_id', 'unit', 'import']].copy()
+        valid_df = df.loc[valid_mask, ['product_id', 'unit', 'import', 'is_new_entry']].copy()
 
         if not valid_df.empty:
-            df.loc[valid_mask, '_xgb_expected'] = compute_xgboost_expected_import(valid_df, 'import')
+            df.loc[valid_mask, '_xgb_expected'] = compute_xgboost_expected_import(valid_df, 'import', 'is_new_entry')
 
         df['_xgb_expected'] = df.groupby(['product_id', 'unit'])['_xgb_expected'].ffill().bfill()
         df['Expected_Import'] = np.where(df['import'] > 0, df['_xgb_expected'], np.nan)
@@ -318,18 +372,18 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         outliers_only = new_entries[new_entries['is_outlier_import'] == True]
         
         # Format output
-        output_df = outliers_only[['product_id', 'import', 'Isolation_Score', 'Expected_Import']].copy()
+        output_df = outliers_only[['product_id', 'import', 'Robust_ZScore', 'Expected_Import', 'is_mismatch']].copy()
         output_df.rename(columns={
             'product_id': 'ชื่อสินค้า',
             'import': 'จำนวนล่าสุดที่นำเข้าไป',
-            'Isolation_Score': 'ค่า Isolation Score',
+            'Robust_ZScore': 'ค่า Robust Z-Score',
             'Expected_Import': 'Expect Import'
         }, inplace=True)
         
-        output_df['ค่า Isolation Score'] = output_df['ค่า Isolation Score'].round(4)
+        output_df['ค่า Robust Z-Score'] = output_df['ค่า Robust Z-Score'].round(4)
         
-        # Sort by Isolation Score descending (highest anomaly first)
-        output_df = output_df.sort_values(by='ค่า Isolation Score', ascending=False)
+        # Sort by Robust Z-Score descending (highest anomaly first)
+        output_df = output_df.sort_values(by='ค่า Robust Z-Score', ascending=False)
         
         records = output_df.to_dict(orient='records')
         

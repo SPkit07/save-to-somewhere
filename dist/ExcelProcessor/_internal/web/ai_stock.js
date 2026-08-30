@@ -22,7 +22,7 @@ if (aiStockFolderInput) {
             console.error("Error loading aiStockFolder from config:", err);
         }
     })();
-    
+
     // Save to config when user types and leaves the field
     aiStockFolderInput.addEventListener('change', async (e) => {
         try {
@@ -87,14 +87,14 @@ async function handleAiFile(file, type) {
         alert("กรุณาเลือกไฟล์ Excel (.xlsx, .xls)");
         return;
     }
-    
+
     showAiStatus('⏳ กำลังอัปโหลดไฟล์รับเข้า...', 'loading');
-    
+
     const reader = new FileReader();
-    reader.onload = async function(event) {
+    reader.onload = async function (event) {
         const result = event.target.result;
         const base64Data = result.includes(',') ? result.split(',')[1] : result;
-        
+
         try {
             const tempPath = await eel.save_temp_file(file.name, base64Data)();
             if (tempPath) {
@@ -137,13 +137,13 @@ function showAiStatus(text, type) {
     const statusMsg = document.getElementById('aiStatusMessage');
     const statusIcon = document.getElementById('aiStatusIcon');
     const statusText = document.getElementById('aiStatusText');
-    
+
     statusMsg.className = 'status-message';
     statusMsg.classList.add(type);
     statusMsg.style.display = 'flex';
     // Support multiline (e.g. stock card path on second line)
     statusText.innerHTML = text.replace(/\n/g, '<br>');
-    
+
     if (type === 'success') statusIcon.innerText = '✅';
     else if (type === 'error') statusIcon.innerText = '❌';
     else statusIcon.innerText = '⏳';
@@ -153,7 +153,7 @@ const processAiBtn = document.getElementById("processAiBtn");
 if (processAiBtn) {
     processAiBtn.addEventListener("click", async () => {
         const stockFolder = aiStockFolderInput ? aiStockFolderInput.value.trim() : "";
-        
+
         if (!aiReceiveTempPath) {
             showAiStatus('❌ กรุณาอัปโหลดไฟล์รับเข้าก่อน', 'error');
             return;
@@ -166,10 +166,10 @@ if (processAiBtn) {
             showAiStatus('❌ ไม่สามารถประมวลผลได้เนื่องจากไม่พบรหัสสาขาในไฟล์รับเข้า', 'error');
             return;
         }
-        
+
         showAiStatus('⏳ กำลังค้นหาไฟล์และประมวลผล AI Stock... อาจใช้เวลาสักครู่', 'loading');
         document.getElementById("aiResultsTableContainer").style.display = "none";
-        
+
         try {
             const result = await eel.process_ai_stock_from_desktop(aiReceiveTempPath, stockFolder, aiDetectedBranch)();
             if (result.success) {
@@ -178,7 +178,7 @@ if (processAiBtn) {
                     statusMsg += `\n📂 สต็อกการ์ด: ${result.stock_card_path}`;
                 }
                 showAiStatus(statusMsg, 'success');
-                
+
                 // Sort by Isolation Score descending
                 const sortedData = (result.data || []).slice().sort((a, b) => {
                     return (b["ค่า Isolation Score"] || 0) - (a["ค่า Isolation Score"] || 0);
@@ -196,19 +196,23 @@ if (processAiBtn) {
 function renderAiResults(data) {
     const tbody = document.getElementById("aiResultsTbody");
     tbody.innerHTML = "";
-    
+
     if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#6b7280;">ไม่มีรายการที่ผิดปกติ</td></tr>';
     } else {
         data.forEach(item => {
             const row = document.createElement("tr");
             row.style.borderBottom = "1px solid var(--border-light)";
-            
+            if (item["is_mismatch"]) {
+                row.style.backgroundColor = "rgba(240, 23, 23, 0.3)"; // Light red background for mismatch
+                row.title = "จำนวน EXPORT_PIECE ไม่เท่ากับ RECEIVE_PIECE";
+            }
+
             let html = `<td style="padding: 10px;">${item["ชื่อสินค้า"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["จำนวนล่าสุดที่นำเข้าไป"]}</td>`;
-            html += `<td style="padding: 10px; text-align: right;">${item["ค่า Isolation Score"]}</td>`;
+            html += `<td style="padding: 10px; text-align: right;">${item["ค่า Robust Z-Score"]}</td>`;
             html += `<td style="padding: 10px; text-align: right; font-weight:bold; color:var(--accent);">${item["Expect Import"]}</td>`;
-            
+
             row.innerHTML = html;
             tbody.appendChild(row);
         });
