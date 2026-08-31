@@ -16,7 +16,8 @@ BRANCH_NAMES = {
     '21': 'K2',
     '31': 'K3',
     '41': 'K4',
-    '51': 'K5'
+    '51': 'K5',
+    'SP': 'Super'
 }
 
 # Ensure temp directory exists

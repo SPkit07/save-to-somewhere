@@ -101,8 +101,8 @@ def find_stock_card_file(folder_path: str, branch_code: str) -> str:
         "31": ["K3", "k3", "เค3", "31"],
         "41": ["K4", "k4", "เค4", "41"],
         "51": ["K5", "k5", "เค5", "51"],
-        "SP": ["SP", "sp", "00"],
-        "00": ["SP", "sp", "00"]
+        "SP": ["SP", "Sp", "sp", "SUPER", "Super", "00"],
+        "00": ["SP", "Sp", "sp", "SUPER", "Super", "00"]
     }
     
     keywords = branch_map.get(branch_code, [branch_code])
