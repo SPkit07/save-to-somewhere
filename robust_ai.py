@@ -387,6 +387,40 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         
         records = output_df.to_dict(orient='records')
         
+        # --- Add History and Robust Parameters for Graph ---
+        history_dict = {}
+        robust_params_dict = {}
+        for idx, row in outliers_only.iterrows():
+            pid = row['product_id']
+            unit = row['unit']
+            
+            # Robust Parameters
+            robust_params_dict[pid] = {
+                'median': float(row['Median_dynamic']) if pd.notna(row['Median_dynamic']) else 0.0,
+                'mad': float(row['MAD_dynamic']) if pd.notna(row['MAD_dynamic']) else 0.0,
+                'iqr': float(row['IQR_dynamic']) if pd.notna(row['IQR_dynamic']) else 0.0
+            }
+            
+            # History
+            prod_history = df[(df['product_id'] == pid) & (df['unit'] == unit) & (df['is_valid_import_bill'] == True)].copy()
+            prod_history = prod_history.sort_values('DATE')
+            h_data = []
+            for _, h_row in prod_history.iterrows():
+                is_current_outlier = bool(h_row['is_new_entry'] and h_row['is_outlier_import'])
+                h_data.append({
+                    'date': h_row['DATE'].strftime('%Y-%m-%d') if pd.notna(h_row['DATE']) else '',
+                    'bill': str(h_row['Bill']) if pd.notna(h_row['Bill']) else '',
+                    'import': float(h_row['import']) if pd.notna(h_row['import']) else 0.0,
+                    'is_outlier': is_current_outlier
+                })
+            history_dict[pid] = h_data
+            
+        for record in records:
+            pid = record['ชื่อสินค้า']
+            record['history'] = history_dict.get(pid, [])
+            record['robust_params'] = robust_params_dict.get(pid, {})
+        # ---------------------------------------------------
+        
         return {
             "success": True,
             "count": len(records),

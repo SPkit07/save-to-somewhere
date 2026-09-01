@@ -203,19 +203,121 @@ function renderAiResults(data) {
         data.forEach(item => {
             const row = document.createElement("tr");
             row.style.borderBottom = "1px solid var(--border-light)";
+            row.style.cursor = "pointer";
+            row.addEventListener("mouseover", () => {
+                if(!item["is_mismatch"]) row.style.backgroundColor = "var(--surface-alt)";
+                else row.style.backgroundColor = "rgba(240, 23, 23, 0.4)";
+            });
+            row.addEventListener("mouseout", () => {
+                if(!item["is_mismatch"]) row.style.backgroundColor = "transparent";
+                else row.style.backgroundColor = "rgba(240, 23, 23, 0.3)";
+            });
+
             if (item["is_mismatch"]) {
                 row.style.backgroundColor = "rgba(240, 23, 23, 0.3)"; // Light red background for mismatch
                 row.title = "จำนวน EXPORT_PIECE ไม่เท่ากับ RECEIVE_PIECE";
             }
 
-            let html = `<td style="padding: 10px;">${item["ชื่อสินค้า"]}</td>`;
+            let html = `<td style="padding: 10px; color: var(--accent); font-weight: 500;">${item["ชื่อสินค้า"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["จำนวนล่าสุดที่นำเข้าไป"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["ค่า Robust Z-Score"]}</td>`;
             html += `<td style="padding: 10px; text-align: right; font-weight:bold; color:var(--accent);">${item["Expect Import"]}</td>`;
 
             row.innerHTML = html;
+            
+            row.addEventListener("click", () => {
+                showAiChartModal(item);
+            });
+            
             tbody.appendChild(row);
         });
     }
     document.getElementById("aiResultsTableContainer").style.display = "block";
+}
+
+let aiChartInstance = null;
+
+function showAiChartModal(item) {
+    document.getElementById("aiChartProductName").innerText = item["ชื่อสินค้า"];
+    
+    // Set robust parameters
+    const params = item["robust_params"] || {};
+    document.getElementById("aiChartIQR").innerText = params.iqr ? params.iqr.toFixed(2) : "-";
+    document.getElementById("aiChartMedian").innerText = params.median ? params.median.toFixed(2) : "-";
+    document.getElementById("aiChartMAD").innerText = params.mad ? params.mad.toFixed(2) : "-";
+    
+    const history = item["history"] || [];
+    
+    const labels = history.map(h => h.date);
+    const dataPoints = history.map(h => h.import);
+    
+    // Colors for points: red if outlier, else default blue
+    const pointColors = history.map(h => h.is_outlier ? 'rgba(239, 68, 68, 1)' : 'rgba(79, 110, 247, 1)');
+    const pointRadiuses = history.map(h => h.is_outlier ? 6 : 4);
+
+    const ctx = document.getElementById("aiImportChart").getContext("2d");
+    
+    if (aiChartInstance) {
+        aiChartInstance.destroy();
+    }
+    
+    aiChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'จำนวนการรับเข้า (Import)',
+                data: dataPoints,
+                borderColor: 'rgba(79, 110, 247, 0.5)',
+                backgroundColor: 'rgba(79, 110, 247, 0.1)',
+                borderWidth: 2,
+                pointBackgroundColor: pointColors,
+                pointBorderColor: pointColors,
+                pointRadius: pointRadiuses,
+                pointHoverRadius: 8,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'วันที่ (Date)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'จำนวนรับเข้า'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            const h = history[index];
+                            let lines = [`เลขที่บิล: ${h.bill || '-'}`, `รับเข้า: ${h.import}`];
+                            if (h.is_outlier) {
+                                lines[1] += ' (Outlier!)';
+                            }
+                            return lines;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    document.getElementById("aiChartModal").style.display = "flex";
+}
+
+function closeAiChartModal() {
+    document.getElementById("aiChartModal").style.display = "none";
 }

@@ -1910,7 +1910,37 @@
         </div>
     </div>
 
+    <!-- ==================== AI CHART MODAL ==================== -->
+    <div class="modal" id="aiChartModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>📈 กราฟการรับเข้าสินค้า: <span id="aiChartProductName"></span></h2>
+                <button class="modal-close" onclick="closeAiChartModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px;">
+                    <div style="background: var(--surface-alt); padding: 10px 15px; border-radius: var(--radius); flex: 1;">
+                        <div style="font-size: 12px; color: var(--text-muted);">IQR</div>
+                        <div style="font-size: 16px; font-weight: 600; color: var(--accent);" id="aiChartIQR">-</div>
+                    </div>
+                    <div style="background: var(--surface-alt); padding: 10px 15px; border-radius: var(--radius); flex: 1;">
+                        <div style="font-size: 12px; color: var(--text-muted);">Median</div>
+                        <div style="font-size: 16px; font-weight: 600; color: var(--green);" id="aiChartMedian">-</div>
+                    </div>
+                    <div style="background: var(--surface-alt); padding: 10px 15px; border-radius: var(--radius); flex: 1;">
+                        <div style="font-size: 12px; color: var(--text-muted);">MAD</div>
+                        <div style="font-size: 16px; font-weight: 600; color: var(--purple);" id="aiChartMAD">-</div>
+                    </div>
+                </div>
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="aiImportChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/eel.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="code-data.js"></script>
     <script src="script.js"></script>
     <script src="ai_stock.js"></script>
