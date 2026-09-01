@@ -387,21 +387,13 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         
         records = output_df.to_dict(orient='records')
         
-        # Save output Excel in the same directory as receive file
-        output_dir = os.path.dirname(receive_file_path)
-        output_name = f"AI_Outlier_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        output_path = os.path.join(output_dir, output_name)
-        
-        output_df.to_excel(output_path, index=False)
-        logger.info(f"Saved AI Outlier Report to {output_path}")
-        
         return {
             "success": True,
             "count": len(records),
             "data": records,
-            "output_path": output_path,
+            "output_path": None,
             "stock_card_path": stock_card_path,
-            "message": f"วิเคราะห์เสร็จสิ้น พบสินค้าผิดปกติ (Outlier) {len(records)} รายการ (บันทึกไฟล์: {output_name})"
+            "message": f"วิเคราะห์เสร็จสิ้น พบสินค้าผิดปกติ (Outlier) {len(records)} รายการ"
         }
         
     except Exception as e:

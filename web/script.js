@@ -45,6 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Page 3 (Code snippets) Initializations
     try { await initCodeTab(); } catch (e) { console.warn('Code tab init failed', e); }
 
+    // Page 3 (Problematic Barcodes) Initializations
+    try { await initProblematicBarcodes(); } catch (e) { console.warn('Problematic barcodes init failed', e); }
+
     // Program ON/OFF Switch
     setupProgramStatusToggle();
 });
@@ -223,6 +226,8 @@ async function previewFile(filePath) {
             showWarningModal(preview);
         } else if (preview.receive_mismatch && preview.receive_mismatch.length > 0) {
             showReceiveWarningModal(preview);
+        } else if (preview.problematic_warnings && preview.problematic_warnings.length > 0) {
+            showProblematicWarningModal(preview);
         } else {
             // แสดง Preview Modal ทันที
             showPreviewModal(preview);
@@ -291,6 +296,8 @@ function continueToPreview() {
     if (currentPreviewData) {
         if (currentPreviewData.receive_mismatch && currentPreviewData.receive_mismatch.length > 0) {
             showReceiveWarningModal(currentPreviewData);
+        } else if (currentPreviewData.problematic_warnings && currentPreviewData.problematic_warnings.length > 0) {
+            showProblematicWarningModal(currentPreviewData);
         } else {
             showPreviewModal(currentPreviewData);
         }
@@ -332,6 +339,53 @@ function closeReceiveWarningModal() {
 
 function continueFromReceiveToPreview() {
     const modal = document.getElementById('receiveWarningModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (currentPreviewData) {
+        if (currentPreviewData.problematic_warnings && currentPreviewData.problematic_warnings.length > 0) {
+            showProblematicWarningModal(currentPreviewData);
+        } else {
+            showPreviewModal(currentPreviewData);
+        }
+    }
+}
+
+// ==================== SHOW PROBLEMATIC BARCODE WARNING MODAL ====================
+function showProblematicWarningModal(preview) {
+    const modal = document.getElementById('problematicBarcodeModal');
+    if (!modal) return;
+    
+    const tbody = document.getElementById('problematicWarningTableBody');
+    tbody.innerHTML = '';
+    
+    if (preview.problematic_warnings && preview.problematic_warnings.length > 0) {
+        preview.problematic_warnings.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.sku_name}</td>
+                <td class="mismatch">${item.wrong_barcode}</td>
+                <td style="color: var(--orange); font-weight: 600;">${item.expected_error || '-'}</td>
+                <td style="color: var(--green); font-weight: 600;">${item.recommended_barcode || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    modal.style.display = 'flex';
+    statusMessage.style.display = 'none';
+}
+
+function closeProblematicWarningModal() {
+    const modal = document.getElementById('problematicBarcodeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentPreviewData = null; // ยกเลิกการทำรายการ
+}
+
+function continueFromProblematicWarningToPreview() {
+    const modal = document.getElementById('problematicBarcodeModal');
     if (modal) {
         modal.style.display = 'none';
     }
@@ -437,17 +491,49 @@ async function validatePathsAndDirectories() {
 }
 
 // ==================== CONFIRM PROCESS ====================
-async function confirmProcess() {
+let pendingSplitData = null;
+
+function goToAiStock() {
     if (!currentPreviewData) {
         showStatus('❌ ไม่มีข้อมูลไฟล์', 'error');
         return;
     }
-
-    // เก็บข้อมูลไว้ก่อน เพราะ closePreviewModal จะ clear currentPreviewData
-    const previewData = { ...currentPreviewData };
-
-    // ตรวจสอบ paths และ directories ก่อน
+    
+    pendingSplitData = { ...currentPreviewData };
     closePreviewModal();
+    
+    // Switch to Tab 4
+    switchTab('ai-stock');
+    
+    // Auto-fill Tab 4
+    if (typeof aiReceiveTempPath !== 'undefined') {
+        aiReceiveTempPath = pendingSplitData.file_path; 
+        aiDetectedBranch = pendingSplitData.detected_branch;
+        
+        const aiReceiveFileName = document.getElementById("aiReceiveFileName");
+        if (aiReceiveFileName) aiReceiveFileName.innerText = pendingSplitData.file_name || "ไฟล์จากหน้าแรก";
+        
+        const aiBranchName = document.getElementById("aiBranchName");
+        if (aiBranchName) aiBranchName.innerText = pendingSplitData.branch_name || "Unknown";
+        
+        const aiBranchCode = document.getElementById("aiBranchCode");
+        if (aiBranchCode) aiBranchCode.innerText = "รหัสสาขา: " + (pendingSplitData.detected_branch || "-");
+        
+        const finalSplitBtn = document.getElementById("finalSplitBtn");
+        if (finalSplitBtn) finalSplitBtn.style.display = "block";
+    }
+}
+
+async function executeFinalSplit() {
+    if (!pendingSplitData) {
+        showStatus('❌ ไม่มีข้อมูลไฟล์สำหรับแยก', 'error');
+        return;
+    }
+
+    const previewData = { ...pendingSplitData };
+
+    // Switch back to Tab 1 to show progress
+    switchTab('processor');
     showStatus('⏳ กำลังตรวจสอบที่อยู่ปลายทาง...', 'loading');
 
     const validation = await validatePathsAndDirectories();
@@ -508,6 +594,10 @@ async function confirmProcess() {
             if (summaryDetails) {
                 summaryDetails.open = true;
             }
+            // Clear pending and hide button
+            pendingSplitData = null;
+            const finalSplitBtn = document.getElementById("finalSplitBtn");
+            if (finalSplitBtn) finalSplitBtn.style.display = "none";
         } else {
             showStatus(`❌ ${result.message}`, 'error');
         }
@@ -1999,4 +2089,122 @@ function copyToClipboard(text) {
         try { document.execCommand('copy'); } catch (e) { console.error(e); }
         ta.remove();
     }
+}
+
+// ==================== PROBLEMATIC BARCODES SETTINGS (TAB 3) ====================
+let problematicBarcodesList = [];
+
+async function initProblematicBarcodes() {
+    // Load from backend
+    if (DESKTOP_MODE && typeof eel !== 'undefined' && eel.load_problematic_barcodes) {
+        try {
+            problematicBarcodesList = await eel.load_problematic_barcodes()();
+        } catch (e) {
+            console.warn('Failed to load problematic barcodes:', e);
+            problematicBarcodesList = [];
+        }
+    }
+    renderProblematicBarcodesTable();
+    setupProblematicBarcodesEvents();
+}
+
+function setupProblematicBarcodesEvents() {
+    const addBtn = document.getElementById('addPbBarcodeBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', addProblematicBarcode);
+    }
+}
+
+async function addProblematicBarcode() {
+    const nameInput = document.getElementById('pbNameInput');
+    const barcodeInput = document.getElementById('pbBarcodeInput');
+    const errorInput = document.getElementById('pbErrorInput');
+    const recommendedInput = document.getElementById('pbRecommendedInput');
+    
+    const barcode = barcodeInput.value.trim();
+    if (!barcode) {
+        alert('กรุณาใส่บาร์ที่มีปัญหา (ช่องนี้จำเป็นต้องกรอก)');
+        barcodeInput.focus();
+        return;
+    }
+    
+    // Check duplicate
+    if (problematicBarcodesList.some(item => item.barcode === barcode)) {
+        alert(`บาร์ "${barcode}" มีอยู่แล้วในรายการ`);
+        return;
+    }
+    
+    const newItem = {
+        name: nameInput.value.trim(),
+        barcode: barcode,
+        error: errorInput.value.trim(),
+        recommended: recommendedInput.value.trim()
+    };
+    
+    problematicBarcodesList.push(newItem);
+    await saveProblematicBarcodes();
+    renderProblematicBarcodesTable();
+    
+    // Clear inputs
+    nameInput.value = '';
+    barcodeInput.value = '';
+    errorInput.value = '';
+    recommendedInput.value = '';
+    barcodeInput.focus();
+}
+
+async function removeProblematicBarcode(index) {
+    if (index < 0 || index >= problematicBarcodesList.length) return;
+    
+    const item = problematicBarcodesList[index];
+    if (!confirm(`ต้องการลบบาร์ "${item.barcode}" (${item.name || '-'}) ออกจากรายการหรือไม่?`)) {
+        return;
+    }
+    
+    problematicBarcodesList.splice(index, 1);
+    await saveProblematicBarcodes();
+    renderProblematicBarcodesTable();
+}
+
+async function saveProblematicBarcodes() {
+    if (DESKTOP_MODE && typeof eel !== 'undefined' && eel.save_problematic_barcodes) {
+        try {
+            await eel.save_problematic_barcodes(problematicBarcodesList)();
+        } catch (e) {
+            console.error('Failed to save problematic barcodes:', e);
+        }
+    }
+}
+
+function renderProblematicBarcodesTable() {
+    const tbody = document.getElementById('pbBarcodeTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (problematicBarcodesList.length === 0) {
+        tbody.innerHTML = `
+            <tr id="pbEmptyRow">
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">ยังไม่มีรายการ กรุณาเพิ่มบาร์ที่คาดว่าจะมีปัญหาด้านบน</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    problematicBarcodesList.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.name || '-'}</td>
+            <td style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--red);">${item.barcode}</td>
+            <td style="color: var(--orange); font-weight: 500;">${item.error || '-'}</td>
+            <td style="color: var(--green); font-weight: 500;">${item.recommended || '-'}</td>
+            <td style="text-align: center;">
+                <button onclick="removeProblematicBarcode(${index})" 
+                    style="background: none; border: 1px solid var(--red); color: var(--red); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 11px; font-weight: 600; transition: var(--transition);" 
+                    onmouseover="this.style.background='var(--red)'; this.style.color='white';" 
+                    onmouseout="this.style.background='none'; this.style.color='var(--red)';">ลบ</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
 }

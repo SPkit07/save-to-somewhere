@@ -72,7 +72,7 @@ def preview_excel_file(file_path: str) -> Dict:
     try:
         import pandas as pd
         import numpy as np
-        from processors import validate_receive_piece
+        from processors import validate_receive_piece, check_problematic_barcodes
         
         logger.info(f"Previewing file: {file_path}")
         
@@ -101,6 +101,10 @@ def preview_excel_file(file_path: str) -> Dict:
             
         # 1b. Validate RECEIVE_PIECE and RE_SKU_CODE
         receive_valid, receive_mismatches = validate_receive_piece(df)
+            
+        # 1c. Validate Problematic Barcodes
+        problematic_config = load_problematic_barcodes()
+        has_problematic, problematic_warnings = check_problematic_barcodes(df, problematic_config)
             
         # 2. Validation for 1=SP,2=WH mismatch (Column J vs K)
         jk_mismatch_details = []
@@ -212,7 +216,8 @@ def preview_excel_file(file_path: str) -> Dict:
             "columns": columns[:5],
             "jk_mismatch": jk_mismatch_details,
             "jk_has_zero": jk_has_zero,
-            "receive_mismatch": receive_mismatches
+            "receive_mismatch": receive_mismatches,
+            "problematic_warnings": problematic_warnings
         }
     
     except Exception as e:
@@ -594,6 +599,32 @@ def save_custom_scripts(scripts: list) -> bool:
         return True
     except Exception as e:
         logger.error(f"Error saving custom scripts to {config_path}: {e}")
+        return False
+
+
+@eel.expose
+def load_problematic_barcodes() -> list:
+    """Load problematic barcodes config from file"""
+    config_path = os.path.join(get_app_config_dir(), "problematic_barcodes.json")
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading problematic barcodes from {config_path}: {e}")
+    return []
+
+
+@eel.expose
+def save_problematic_barcodes(barcodes: list) -> bool:
+    """Save problematic barcodes config to file"""
+    config_path = os.path.join(get_app_config_dir(), "problematic_barcodes.json")
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(barcodes, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving problematic barcodes to {config_path}: {e}")
         return False
 
 

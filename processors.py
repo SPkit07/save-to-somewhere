@@ -22,8 +22,19 @@ def validate_receive_piece(df) -> Tuple[bool, list]:
     """
     try:
         import pandas as pd
-        if "RECEIVE_PIECE" not in df.columns or "RE_SKU_CODE" not in df.columns:
-            logger.info("RECEIVE_PIECE or RE_SKU_CODE column not found - skipping check")
+        
+        # ค้นหาคอลัมน์บาร์โค้ด
+        barcode_col = None
+        for candidate in ["RE_SKU_CODE", "SKU_CODE", "BARCODE", "GOODS_CODE", "รหัสบาร์โค้ด", "บาร์โค้ด"]:
+            if candidate in df.columns:
+                barcode_col = candidate
+                break
+        
+        if not barcode_col and len(df.columns) > 3:
+            barcode_col = df.columns[3] # Fallback to Column D (index 3)
+            
+        if "RECEIVE_PIECE" not in df.columns or not barcode_col:
+            logger.info("RECEIVE_PIECE or barcode column not found - skipping check")
             return True, []
             
         # สร้าง copy เพื่อไม่ให้กระทบข้อมูลหลักหากต้องการแก้แค่ในฟังก์ชัน
@@ -38,18 +49,18 @@ def validate_receive_piece(df) -> Tuple[bool, list]:
         receive_pieces = pd.to_numeric(temp_df["RECEIVE_PIECE"], errors='coerce')
         condition_receive = receive_pieces > 0
         
-        # 3. col "RE_SKU_CODE" ต้องห้ามเป็นค่าว่าง
-        # ตรวจสอบว่า RE_SKU_CODE เป็นค่าว่างหรือ NaN
-        condition_sku_empty = temp_df["RE_SKU_CODE"].isna() | (temp_df["RE_SKU_CODE"].astype(str).str.strip() == "")
+        # 3. col barcode ต้องห้ามเป็นค่าว่าง
+        # ตรวจสอบว่า barcode เป็นค่าว่างหรือ NaN
+        condition_sku_empty = temp_df[barcode_col].isna() | (temp_df[barcode_col].astype(str).str.strip() == "")
         
         # กรองหาแถวที่ผิดเงื่อนไข
         mismatched_df = temp_df[condition_receive & condition_sku_empty]
         
         if mismatched_df.empty:
-            logger.info("✅ All valid: No rows with RECEIVE_PIECE > 0 have empty RE_SKU_CODE")
+            logger.info("✅ All valid: No rows with RECEIVE_PIECE > 0 have empty barcode")
             return True, []
             
-        logger.warning(f"⚠️ Found {len(mismatched_df)} rows with RECEIVE_PIECE > 0 but empty RE_SKU_CODE")
+        logger.warning(f"⚠️ Found {len(mismatched_df)} rows with RECEIVE_PIECE > 0 but empty barcode")
         
         # ค้นหาคอลัมน์ชื่อสินค้า
         prod_name_col = None
@@ -78,6 +89,121 @@ def validate_receive_piece(df) -> Tuple[bool, list]:
     except Exception as e:
         logger.error(f"Error checking RECEIVE_PIECE and RE_SKU_CODE: {e}", exc_info=True)
         return True, []
+
+def check_problematic_barcodes(df, config_list) -> Tuple[bool, list]:
+    """
+    ตรวจสอบว่าคอลัมน์ RE_SKU_CODE ตรงกับรายการบาร์ที่มีปัญหาที่ตั้งค่าไว้หรือไม่
+    
+    Args:
+        df: DataFrame
+        config_list: List of dicts [{"name": "...", "barcode": "...", "error": "...", "recommended": "..."}, ...]
+    
+    Returns:
+        Tuple of (has_problematic, warning_details_list)
+    """
+    try:
+        import pandas as pd
+        import re as re_module
+        if not config_list:
+            logger.info("No problematic barcodes config - skipping check")
+            return False, []
+            
+        # ค้นหาคอลัมน์บาร์โค้ด
+        barcode_col = None
+        for candidate in ["RE_SKU_CODE", "SKU_CODE", "BARCODE", "GOODS_CODE", "รหัสบาร์โค้ด", "บาร์โค้ด"]:
+            if candidate in df.columns:
+                barcode_col = candidate
+                break
+        
+        if not barcode_col and len(df.columns) > 3:
+            barcode_col = df.columns[3] # Fallback to Column D (index 3)
+            
+        if not barcode_col:
+            logger.info("Barcode column not found - skipping problematic barcode check")
+            return False, []
+        
+        def clean_barcode(val):
+            """ทำความสะอาดบาร์โค้ด: ลบ .0 ท้าย, ลบช่องว่าง, แปลงเป็น string"""
+            # ลบ space และ zero-width space
+            s = str(val).strip().replace(" ", "").replace("\u200b", "")
+            # ลบ .0 ที่ลอยมาจาก float ใน Excel เช่น 123456.0 -> 123456
+            s = re_module.sub(r'\.0$', '', s)
+            return s
+            
+        # สร้าง dict เพื่อความรวดเร็วในการค้นหา (ทำความสะอาดบาร์ก่อน)
+        problematic_dict = {}
+        for item in config_list:
+            bc = item.get("barcode", "")
+            if bc:
+                cleaned = clean_barcode(bc)
+                problematic_dict[cleaned] = item
+                
+                # เพิ่ม fallback สำหรับบาร์โค้ดที่เป็นตัวเลขล้วน 
+                # (เพื่อแก้ปัญหา Excel ตัด 0 นำหน้าออก ทำให้ค่าจาก config มี 0 แต่ใน Excel ไม่มี)
+                if cleaned.isdigit():
+                    try:
+                        int_val = str(int(cleaned))
+                        if int_val != cleaned:
+                            problematic_dict[int_val] = item
+                    except ValueError:
+                        pass
+                
+        if not problematic_dict:
+            logger.info("No valid barcodes in config - skipping check")
+            return False, []
+        
+        logger.info(f"Checking {len(df)} rows against {len(problematic_dict)} problematic barcodes: {list(problematic_dict.keys())}")
+            
+        # ค้นหาคอลัมน์ชื่อสินค้า
+        prod_name_col = None
+        for candidate in ["SKU_NAME", "GOODS_NAME", "PRODUCT_NAME", "ITEM_NAME", "ชื่อสินค้า"]:
+            if candidate in df.columns:
+                prod_name_col = candidate
+                break
+        
+        if not prod_name_col and len(df.columns) > 5:
+            prod_name_col = df.columns[5] # Fallback
+            
+        warning_details = []
+        
+        for idx, row in df.iterrows():
+            raw_val = row.get(barcode_col, "")
+            if pd.isna(raw_val) or str(raw_val).strip() == "" or str(raw_val).strip().lower() == "nan":
+                continue
+            re_sku = clean_barcode(raw_val)
+            
+            # ลองหาแบบเป๊ะๆ ก่อน
+            config_item = problematic_dict.get(re_sku)
+            
+            # ถ้าไม่เจอ และเป็นตัวเลขล้วน ลองแปลงเป็น int เพื่อตัด 0 นำหน้าแล้วหาใหม่
+            if not config_item and re_sku.isdigit():
+                try:
+                    int_sku = str(int(re_sku))
+                    config_item = problematic_dict.get(int_sku)
+                except ValueError:
+                    pass
+
+            if config_item:
+                actual_name = row[prod_name_col] if prod_name_col and pd.notna(row[prod_name_col]) else "ไม่ระบุชื่อ"
+                
+                warning_details.append({
+                    "row": idx + 1,
+                    "sku_name": str(actual_name).strip(),
+                    "wrong_barcode": config_item.get("barcode", re_sku),  # คืนค่าตัวที่มี 0 นำหน้าตามที่ user ตั้งค่าไว้
+                    "expected_error": config_item.get("error", ""),
+                    "recommended_barcode": config_item.get("recommended", "")
+                })
+                
+        if warning_details:
+            logger.warning(f"⚠️ Found {len(warning_details)} rows with problematic barcodes")
+            return True, warning_details
+        
+        logger.info("✅ No problematic barcodes found in data")
+        return False, []
+        
+    except Exception as e:
+        logger.error(f"Error checking problematic barcodes: {e}", exc_info=True)
+        return False, []
 
 # ==================== PATH MANAGEMENT ====================
 

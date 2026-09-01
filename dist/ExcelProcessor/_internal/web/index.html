@@ -1621,7 +1621,10 @@
                 <span class="status-text" id="aiStatusText">กำลังประมวลผล...</span>
             </div>
 
-            <button id="processAiBtn" class="save-btn" style="margin-bottom: 20px;">ประมวลผล Isolation Forest</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="processAiBtn" class="save-btn" style="flex: 1;">ประมวลผล Isolation Forest</button>
+                <button id="finalSplitBtn" class="save-btn" style="flex: 1; background: var(--green); display: none;" onclick="executeFinalSplit()">✅ ยืนยันแยกไฟล์ (ขั้นตอนสุดท้าย)</button>
+            </div>
 
             <div id="aiResultsTableContainer" style="display:none; overflow-x:auto;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -1647,6 +1650,57 @@
     <!-- ==================== TAB 3: Code Content ==================== -->
     <div id="tab-code" class="tab-content" style="display:none; max-width:1400px; margin:0 auto; width:100%;">
         <div style="min-width:0; width:100%;">
+
+            <!-- ==================== PROBLEMATIC BARCODES SETTINGS ==================== -->
+            <details class="settings-panel" id="problematicBarcodesPanel" style="margin-bottom: 14px;">
+                <summary>🚨 ตั้งค่าบาร์โค้ดที่คาดว่าจะมีปัญหา</summary>
+                <div class="details-content">
+                    <!-- Add new barcode form -->
+                    <div style="background: var(--surface-alt); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; border: 1px dashed var(--border);">
+                        <h3 style="font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px;">➕ เพิ่มบาร์ที่คาดว่าจะมีปัญหา</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label class="path-label">📝 ชื่อสินค้า (ช่วยจำ)</label>
+                                <input type="text" id="pbNameInput" class="path-input" placeholder="เช่น น้ำดื่ม ABC">
+                            </div>
+                            <div>
+                                <label class="path-label">🔖 บาร์ที่มีปัญหา (RE_SKU_CODE)</label>
+                                <input type="text" id="pbBarcodeInput" class="path-input" placeholder="เช่น 8851234567890">
+                            </div>
+                            <div>
+                                <label class="path-label">⚠️ ข้อความที่คาดว่าผิด</label>
+                                <input type="text" id="pbErrorInput" class="path-input" placeholder="เช่น นำเข้าไม่ได้, บาร์นี้ปิดอยู่">
+                            </div>
+                            <div>
+                                <label class="path-label">✅ บาร์ที่แนะนำ (ถ้ามี)</label>
+                                <input type="text" id="pbRecommendedInput" class="path-input" placeholder="เว้นว่างได้ถ้าไม่มี">
+                            </div>
+                        </div>
+                        <button id="addPbBarcodeBtn" class="save-btn" style="background: var(--red); margin-top: 10px; padding: 10px;">➕ เพิ่มรายการ</button>
+                    </div>
+
+                    <!-- Table of existing barcodes -->
+                    <div id="pbBarcodeListContainer" style="border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden;">
+                        <table class="warning-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อสินค้า</th>
+                                    <th>บาร์ที่มีปัญหา</th>
+                                    <th>ข้อความที่ผิด</th>
+                                    <th>บาร์ที่แนะนำ</th>
+                                    <th style="width: 50px; text-align: center;">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pbBarcodeTableBody">
+                                <tr id="pbEmptyRow">
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">ยังไม่มีรายการ กรุณาเพิ่มบาร์ที่คาดว่าจะมีปัญหาด้านบน</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+
             <div class="card"
                 style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
@@ -1722,7 +1776,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closePreviewModal()">ยกเลิก</button>
-                <button class="btn-confirm" onclick="confirmProcess()">✅ ยืนยันและประมวลผล</button>
+                <button class="btn-confirm" onclick="goToAiStock()">✅ ตรวจสอบสต็อก (AI) ก่อนแยกไฟล์</button>
             </div>
         </div>
     </div>
@@ -1790,6 +1844,39 @@
                 <button class="btn-cancel" onclick="closeReceiveWarningModal()">ยกเลิก</button>
                 <button class="btn-confirm" onclick="continueFromReceiveToPreview()"
                     style="background: #e67e22;">ข้ามและดำเนินการต่อ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PROBLEMATIC BARCODE MODAL ==================== -->
+    <div class="modal" id="problematicBarcodeModal">
+        <div class="modal-content" style="border-top: 3px solid var(--red); max-width: 650px;">
+            <div class="modal-header" style="background: var(--red);">
+                <h2>⚠️ คำเตือน: พบชุดบาร์โค้ดที่คาดว่าจะมีปัญหา</h2>
+                <button class="modal-close" onclick="closeProblematicWarningModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--red); font-weight: 600; margin-bottom: 10px; font-size: 13px;">
+                    ระบบตรวจสอบพบ RE_SKU_CODE ตรงกับบาร์ที่คาดว่าจะมีปัญหา กรุณาตรวจสอบ:
+                </p>
+                <div class="warning-table-container">
+                    <table class="warning-table">
+                        <thead>
+                            <tr>
+                                <th>ชื่อสินค้า (SKU_NAME)</th>
+                                <th>บาร์ที่มีปัญหา</th>
+                                <th>ข้อความที่ผิด</th>
+                                <th>บาร์ที่แนะนำ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="problematicWarningTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeProblematicWarningModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="continueFromProblematicWarningToPreview()"
+                    style="background: var(--red);">ข้ามและดำเนินการต่อ</button>
             </div>
         </div>
     </div>
