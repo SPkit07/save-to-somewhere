@@ -52,7 +52,20 @@ def compute_isolation_forest_outliers(df_filtered, col='import'):
     
     # Create ratio feature
     ratio = df_filtered[col] / (group_median + 1e-9)
-    X = pd.DataFrame({'val': df_filtered[col], 'ratio': ratio})
+    
+    # Prepare features
+    features = {'val': df_filtered[col], 'ratio': ratio}
+    
+    # Add time patterns if DATE is available
+    if 'DATE' in df_filtered.columns:
+        # Day of month (1-31)
+        features['day_of_month'] = df_filtered['DATE'].dt.day
+        # Identify typical peak periods: start of month (<=5) or end of month (>=25)
+        features['is_peak_period'] = ((df_filtered['DATE'].dt.day <= 5) | (df_filtered['DATE'].dt.day >= 25)).astype(int)
+        # Day of week (0=Monday, 6=Sunday)
+        features['day_of_week'] = df_filtered['DATE'].dt.dayofweek
+        
+    X = pd.DataFrame(features)
     
     # Fit Isolation Forest
     iso = IsolationForest(contamination='auto', random_state=42)
@@ -74,7 +87,15 @@ def compute_xgboost_expected_import(df_filtered, col='import', is_new_col=None):
     df['import_lag2'] = df.groupby(group_cols)[col].shift(2).fillna(0)
     df['import_lag3'] = df.groupby(group_cols)[col].shift(3).fillna(0)
     
-    X = df[['import_lag1', 'import_lag2', 'import_lag3']]
+    feature_cols = ['import_lag1', 'import_lag2', 'import_lag3']
+    
+    if 'DATE' in df.columns:
+        df['day_of_month'] = df['DATE'].dt.day
+        df['is_peak_period'] = ((df['DATE'].dt.day <= 5) | (df['DATE'].dt.day >= 25)).astype(int)
+        df['day_of_week'] = df['DATE'].dt.dayofweek
+        feature_cols.extend(['day_of_month', 'is_peak_period', 'day_of_week'])
+        
+    X = df[feature_cols]
     y = df[col]
     
     model = xgb.XGBRegressor(n_estimators=100, max_depth=3, random_state=42)
