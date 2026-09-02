@@ -316,12 +316,19 @@ def preview_receive_for_ai(file_path: str) -> Dict:
         return {"success": False, "message": str(e)}
 
 @eel.expose
-def process_ai_stock_from_desktop(receive_path: str, stock_card_folder: str, branch_code: str) -> Dict:
+def process_ai_stock_from_desktop(receive_path: str, stock_card_folder: str, branch_code: str, enable_export_analysis: bool = False) -> Dict:
     """Run AI Stock processing using robust_ai.py"""
+    
+    def progress_callback(percent: int, msg: str):
+        try:
+            eel.updateAiProgress(percent, msg)
+        except Exception:
+            pass
+
     try:
         from robust_ai import process_ai_stock
-        logger.info(f"Processing AI Stock: Receive={receive_path}, Folder={stock_card_folder}, Branch={branch_code}")
-        result = process_ai_stock(receive_path, stock_card_folder, branch_code)
+        logger.info(f"Processing AI Stock: Receive={receive_path}, Folder={stock_card_folder}, Branch={branch_code}, ExportAnalysis={enable_export_analysis}")
+        result = process_ai_stock(receive_path, stock_card_folder, branch_code, enable_export_analysis, progress_callback=progress_callback)
         return result
     except Exception as e:
         logger.error(f"Error in process_ai_stock_from_desktop: {e}", exc_info=True)

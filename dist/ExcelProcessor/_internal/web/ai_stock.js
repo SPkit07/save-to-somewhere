@@ -149,10 +149,20 @@ function showAiStatus(text, type) {
     else statusIcon.innerText = '⏳';
 }
 
+eel.expose(updateAiProgress);
+function updateAiProgress(percent, msg) {
+    const aiStatusText = document.getElementById("aiStatusText");
+    if (aiStatusText) {
+        aiStatusText.innerText = `[${percent}%] ${msg}`;
+    }
+}
+
 const processAiBtn = document.getElementById("processAiBtn");
 if (processAiBtn) {
     processAiBtn.addEventListener("click", async () => {
         const stockFolder = aiStockFolderInput ? aiStockFolderInput.value.trim() : "";
+        const enableExportAnalysisElem = document.getElementById("enableExportAnalysis");
+        const enableExportAnalysis = enableExportAnalysisElem ? enableExportAnalysisElem.checked : false;
 
         if (!aiReceiveTempPath) {
             showAiStatus('❌ กรุณาอัปโหลดไฟล์รับเข้าก่อน', 'error');
@@ -171,7 +181,7 @@ if (processAiBtn) {
         document.getElementById("aiResultsTableContainer").style.display = "none";
 
         try {
-            const result = await eel.process_ai_stock_from_desktop(aiReceiveTempPath, stockFolder, aiDetectedBranch)();
+            const result = await eel.process_ai_stock_from_desktop(aiReceiveTempPath, stockFolder, aiDetectedBranch, enableExportAnalysis)();
             if (result.success) {
                 let statusMsg = `✅ ${result.message}`;
                 if (result.stock_card_path) {
@@ -221,7 +231,20 @@ function renderAiResults(data) {
             let html = `<td style="padding: 10px; color: var(--accent); font-weight: 500;">${item["ชื่อสินค้า"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["จำนวนล่าสุดที่นำเข้าไป"]}</td>`;
             html += `<td style="padding: 10px; text-align: right;">${item["ค่า Robust Z-Score"]}</td>`;
-            html += `<td style="padding: 10px; text-align: right; font-weight:bold; color:var(--accent);">${item["Expect Import"]}</td>`;
+            html += `<td style="padding: 10px; text-align: right; font-weight:bold; color:var(--accent);">${item["Expect Import"] !== null ? item["Expect Import"] : '-'}</td>`;
+
+            let badgeColor = "#6b7280"; // Default gray
+            let anomalyType = item["ประเภทความผิดปกติ"] || 'Unknown';
+            if (anomalyType.includes('Dead Stock')) badgeColor = "#9ca3af";
+            else if (anomalyType.includes('Ghost Stock')) badgeColor = "#f59e0b";
+            else if (anomalyType.includes('Missing Import Bill')) badgeColor = "#3b82f6";
+            else if (anomalyType.includes('Over-Import')) badgeColor = "#ef4444";
+
+            html += `<td style="padding: 10px; text-align: center;">
+                        <span style="background-color: ${badgeColor}20; color: ${badgeColor}; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                            ${anomalyType}
+                        </span>
+                     </td>`;
 
             row.innerHTML = html;
             
@@ -255,7 +278,38 @@ function showAiChartModal(item) {
     
     // Colors for points: red if outlier, else default blue
     const pointColors = history.map(h => h.is_outlier ? 'rgba(239, 68, 68, 1)' : 'rgba(79, 110, 247, 1)');
-    const pointRadiuses = history.map(h => h.is_outlier ? 6 : 4);
+    const pointRadiuses = history.map(h => {
+        if (h.is_outlier && h.import > 0) return 6;
+        if (h.import === 0) return 0;
+        return 4;
+    });
+
+    let anomalyType = item["ประเภทความผิดปกติ"] || '';
+    let explanationDiv = document.getElementById("aiChartExplanation");
+    let explanationHTML = "";
+    
+    if (anomalyType.includes('Missing Import Bill')) {
+        explanationHTML = `<div style="background: rgba(59, 130, 246, 0.1); color: #1d4ed8; padding: 10px; border-left: 4px solid #3b82f6;">
+            <strong>ฟันหลอ (Missing Import Bill):</strong> สินค้านี้มีประวัติการขายออก (สีส้ม) อย่างต่อเนื่อง แต่จู่ๆ ก็ไม่มีการนำเข้า (สีน้ำเงิน) เลยเป็นเวลานานผิดปกติเมื่อเทียบกับรอบนำเข้าประจำของสินค้านี้ ลองซูมดูช่วงล่าสุดในกราฟว่ามีการขายแต่ไม่มีรับเข้าจริงหรือไม่
+        </div>`;
+    } else if (anomalyType.includes('Ghost Stock')) {
+        explanationHTML = `<div style="background: rgba(245, 158, 11, 0.1); color: #b45309; padding: 10px; border-left: 4px solid #f59e0b;">
+            <strong>สต็อกผี (Ghost Stock):</strong> สินค้านี้มีการคีย์นำเข้าในบิลล่าสุด แต่ในอดีตที่ผ่านมา (มากกว่า 90 วัน) <u>ไม่มีการขายออกเลย</u> ทั้งๆ ที่มีของในคลังอยู่แล้ว! อาจเกิดจากการคีย์รับเข้าซ้ำซ้อนผิดตัว หรือสินค้าตัวนี้สูญหาย/เสื่อมสภาพไปแล้วแต่ไม่ได้ตัดสต็อก
+        </div>`;
+    } else if (anomalyType.includes('Over-Import')) {
+        explanationHTML = `<div style="background: rgba(239, 68, 68, 0.1); color: #b91c1c; padding: 10px; border-left: 4px solid #ef4444;">
+            <strong>รับเข้าสูงผิดปกติ (Over-Import):</strong> ยอดนำเข้าในบิลล่าสุด <strong>(${item["จำนวนล่าสุดที่นำเข้าไป"]})</strong> สูงกว่ารอบก่อนๆ มากๆ เมื่อเทียบกับค่าเฉลี่ยในอดีต (Expected: ${item["Expect Import"] !== null ? item["Expect Import"] : '-'}) AI ตรวจพบว่าเป็น Outlier ลองเช็คว่าคีย์เลขผิด หรือรับของมาเกินความจำเป็น
+        </div>`;
+    } else if (anomalyType.includes('Dead Stock')) {
+        explanationHTML = `<div style="background: rgba(156, 163, 175, 0.1); color: #374151; padding: 10px; border-left: 4px solid #9ca3af;">
+            <strong>สินค้าค้างสต็อก (Dead Stock):</strong> สินค้านี้มีของในคลัง (สีเขียว) แต่ไม่มีการเคลื่อนไหวเลย (ทั้งรับเข้าและขายออก) มาเป็นเวลานานกว่า 90 วัน
+        </div>`;
+    }
+    
+    if (explanationDiv) {
+        explanationDiv.innerHTML = explanationHTML;
+        explanationDiv.style.display = explanationHTML ? "block" : "none";
+    }
 
     const ctx = document.getElementById("aiImportChart").getContext("2d");
     
@@ -287,7 +341,7 @@ function showAiChartModal(item) {
                     borderColor: 'rgba(245, 158, 11, 0.8)',
                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
                     borderWidth: 2,
-                    pointRadius: 3,
+                    pointRadius: ctx => ctx.raw === 0 ? 0 : 3,
                     pointHoverRadius: 6,
                     fill: false,
                     tension: 0.1,
@@ -299,7 +353,7 @@ function showAiChartModal(item) {
                     borderColor: 'rgba(16, 185, 129, 0.8)',
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     borderWidth: 2,
-                    pointRadius: 3,
+                    pointRadius: ctx => ctx.raw === 0 ? 0 : 3,
                     pointHoverRadius: 6,
                     fill: false,
                     tension: 0.1,
@@ -330,6 +384,17 @@ function showAiChartModal(item) {
                 }
             },
             plugins: {
+                zoom: {
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x'
+                    },
+                    pan: {
+                        enabled: true,
+                        mode: 'x'
+                    }
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -337,7 +402,7 @@ function showAiChartModal(item) {
                             const h = history[index];
                             let val = context.parsed.y;
                             let label = `${context.dataset.label}: ${val}`;
-                            if (h.is_outlier && context.datasetIndex === 0) {
+                            if (h.is_outlier && context.datasetIndex === 0 && val > 0) {
                                 label += ' (Outlier!)';
                             }
                             return label;
