@@ -402,16 +402,39 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
             }
             
             # History
-            prod_history = df[(df['product_id'] == pid) & (df['unit'] == unit) & (df['is_valid_import_bill'] == True)].copy()
-            prod_history = prod_history.sort_values('DATE')
+            prod_history = df[(df['product_id'] == pid) & (df['unit'] == unit)].copy()
+            prod_history['_orig_idx'] = prod_history.index
+            prod_history = prod_history.sort_values(['DATE', '_orig_idx'])
+            
             h_data = []
-            for _, h_row in prod_history.iterrows():
-                is_current_outlier = bool(h_row['is_new_entry'] and h_row['is_outlier_import'])
+            for date_val, group in prod_history.groupby('DATE', sort=False):
+                import_sum = group['import'].sum()
+                export_sum = group['export'].sum()
+                last_balance = group['balances'].iloc[-1]
+                
+                bill_details = []
+                for _, r in group.iterrows():
+                    b = str(r['Bill']).strip() if pd.notna(r['Bill']) else '-'
+                    i_val = float(r['import']) if pd.notna(r['import']) else 0.0
+                    e_val = float(r['export']) if pd.notna(r['export']) else 0.0
+                    
+                    if i_val > 0 or e_val > 0:
+                        detail_str = f"[{b}]"
+                        if i_val > 0:
+                            detail_str += f" รับ:{i_val:g}"
+                        if e_val > 0:
+                            detail_str += f" ขาย:{e_val:g}"
+                        bill_details.append(detail_str)
+                        
+                is_outlier = bool((group['is_new_entry'] & group['is_outlier_import']).any())
+                
                 h_data.append({
-                    'date': h_row['DATE'].strftime('%Y-%m-%d') if pd.notna(h_row['DATE']) else '',
-                    'bill': str(h_row['Bill']) if pd.notna(h_row['Bill']) else '',
-                    'import': float(h_row['import']) if pd.notna(h_row['import']) else 0.0,
-                    'is_outlier': is_current_outlier
+                    'date': date_val.strftime('%Y-%m-%d') if pd.notna(date_val) else '',
+                    'bill_details': bill_details,
+                    'import': float(import_sum),
+                    'export': float(export_sum),
+                    'balance': float(last_balance),
+                    'is_outlier': is_outlier
                 })
             history_dict[pid] = h_data
             

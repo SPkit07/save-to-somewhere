@@ -249,7 +249,9 @@ function showAiChartModal(item) {
     const history = item["history"] || [];
     
     const labels = history.map(h => h.date);
-    const dataPoints = history.map(h => h.import);
+    const importData = history.map(h => h.import);
+    const exportData = history.map(h => h.export);
+    const balanceData = history.map(h => h.balance);
     
     // Colors for points: red if outlier, else default blue
     const pointColors = history.map(h => h.is_outlier ? 'rgba(239, 68, 68, 1)' : 'rgba(79, 110, 247, 1)');
@@ -265,23 +267,53 @@ function showAiChartModal(item) {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'จำนวนการรับเข้า (Import)',
-                data: dataPoints,
-                borderColor: 'rgba(79, 110, 247, 0.5)',
-                backgroundColor: 'rgba(79, 110, 247, 0.1)',
-                borderWidth: 2,
-                pointBackgroundColor: pointColors,
-                pointBorderColor: pointColors,
-                pointRadius: pointRadiuses,
-                pointHoverRadius: 8,
-                fill: true,
-                tension: 0.1
-            }]
+            datasets: [
+                {
+                    label: 'จำนวนรับเข้า (Import)',
+                    data: importData,
+                    borderColor: 'rgba(79, 110, 247, 0.8)',
+                    backgroundColor: 'rgba(79, 110, 247, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    pointRadius: pointRadiuses,
+                    pointHoverRadius: 8,
+                    fill: true,
+                    tension: 0.1
+                },
+                {
+                    label: 'จำนวนขาย (Export)',
+                    data: exportData,
+                    borderColor: 'rgba(245, 158, 11, 0.8)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    fill: false,
+                    tension: 0.1,
+                    hidden: true
+                },
+                {
+                    label: 'คงเหลือ (Balance)',
+                    data: balanceData,
+                    borderColor: 'rgba(16, 185, 129, 0.8)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    fill: false,
+                    tension: 0.1,
+                    hidden: true
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             scales: {
                 x: {
                     title: {
@@ -293,7 +325,7 @@ function showAiChartModal(item) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'จำนวนรับเข้า'
+                        text: 'จำนวน'
                     }
                 }
             },
@@ -303,11 +335,23 @@ function showAiChartModal(item) {
                         label: function(context) {
                             const index = context.dataIndex;
                             const h = history[index];
-                            let lines = [`เลขที่บิล: ${h.bill || '-'}`, `รับเข้า: ${h.import}`];
-                            if (h.is_outlier) {
-                                lines[1] += ' (Outlier!)';
+                            let val = context.parsed.y;
+                            let label = `${context.dataset.label}: ${val}`;
+                            if (h.is_outlier && context.datasetIndex === 0) {
+                                label += ' (Outlier!)';
                             }
-                            return lines;
+                            return label;
+                        },
+                        afterBody: function(contextItems) {
+                            if (!contextItems || contextItems.length === 0) return [];
+                            const index = contextItems[0].dataIndex;
+                            const h = history[index];
+                            if (h && h.bill_details && h.bill_details.length > 0) {
+                                let lines = ['', '--- รายละเอียดบิล ---'];
+                                h.bill_details.forEach(d => lines.push(d));
+                                return lines;
+                            }
+                            return [];
                         }
                     }
                 }
