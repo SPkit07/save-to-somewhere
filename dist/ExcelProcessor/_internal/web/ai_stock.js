@@ -245,6 +245,11 @@ function renderAiResults(data) {
                             ${anomalyType}
                         </span>
                      </td>`;
+            
+            // Add Evidence Button column
+            html += `<td style="padding: 10px; text-align: center;" onclick="event.stopPropagation();">
+                        <button class="save-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; min-width: auto; background-color: var(--primary);" onclick="openEvidenceUploadFromAI('${item["ชื่อสินค้า"].replace(/'/g, "\\'")}', '${item["จำนวนล่าสุดที่นำเข้าไป"] || ''}', '${aiDetectedBranch || ''}')">📎 แนบรูป</button>
+                     </td>`;
 
             row.innerHTML = html;
             

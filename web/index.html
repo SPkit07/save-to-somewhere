@@ -1377,6 +1377,7 @@
             ส่งไฟล์ IB</button>
         <button class="tab-button" id="tabBtnCode" onclick="switchTab('code')">🧩 โค้ด</button>
         <button class="tab-button" id="tabBtnAiStock" onclick="switchTab('ai-stock')">🤖 วิเคราะห์สต็อก 📦</button>
+        <button class="tab-button" id="tabBtnEvidence" onclick="switchTab('evidence')">📸 หลักฐาน</button>
     </div>
 
     <!-- ==================== TAB 1: Excel Processor ==================== -->
@@ -1656,6 +1657,38 @@
         </div>
     </div>
 
+    <!-- ==================== TAB 5: Evidence ==================== -->
+    <div id="tab-evidence" class="tab-content container" style="display:none;">
+        <!-- LEFT SECTION: Tree View -->
+        <div class="left-section" style="max-width: 300px;">
+            <div class="card" style="padding: 16px; height: 100%; display: flex; flex-direction: column;">
+                <h2 style="color: var(--text); font-size: 14px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+                    📂 ค้นหาหลักฐาน
+                </h2>
+                <div style="margin-bottom: 12px;">
+                    <button class="save-btn" id="btnManualEvidence" style="margin-top: 0; padding: 8px; font-size: 13px;" onclick="openManualEvidenceUpload()">➕ เพิ่มหลักฐานแบบแมนนวล</button>
+                </div>
+                <div id="evidenceTreeContainer" style="flex: 1; overflow-y: auto; font-size: 13px; line-height: 1.8;">
+                    <div style="color: var(--text-muted); text-align: center; margin-top: 20px;">กำลังโหลด...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SECTION: Evidence List -->
+        <div class="right-section" style="flex: 1; min-height: 80vh;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+                <h2 style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">📸 รายการหลักฐาน <span id="evidenceCurrentDate" style="color: var(--text-muted); font-weight: 500;"></span></h2>
+                <button class="btn-cancel" onclick="loadEvidenceTree()" style="padding: 6px 12px;">🔄 รีเฟรช</button>
+            </div>
+            
+            <div id="evidenceListContainer" style="display: grid; grid-template-columns: 1fr; gap: 16px;">
+                <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+                    👈 กรุณาเลือกวันที่จากเมนูด้านซ้าย
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== TAB 3: Code Content ==================== -->
     <div id="tab-code" class="tab-content" style="display:none; max-width:1400px; margin:0 auto; width:100%;">
         <div style="min-width:0; width:100%;">
@@ -1890,6 +1923,77 @@
         </div>
     </div>
 
+    <!-- ==================== EVIDENCE UPLOAD MODAL ==================== -->
+    <div class="modal" id="evidenceUploadModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📎 แนบรูปหลักฐานสินค้า</h2>
+                <button class="modal-close" onclick="closeEvidenceUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="background: var(--surface);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="path-label">ชื่อสินค้า</label>
+                        <input type="text" id="evProductName" class="path-input" placeholder="ระบุชื่อสินค้า">
+                    </div>
+                    <div>
+                        <label class="path-label">สาขา</label>
+                        <select id="evBranch" class="path-input" style="font-family: inherit;">
+                            <option value="K1">K1 (สาขา 11)</option>
+                            <option value="K2">K2 (สาขา 21)</option>
+                            <option value="K3">K3 (สาขา 31)</option>
+                            <option value="K4">K4 (สาขา 41)</option>
+                            <option value="K5">K5 (สาขา 51)</option>
+                            <option value="SP">SP (คลังสินค้า 00)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div>
+                        <label class="path-label">วันที่</label>
+                        <input type="date" id="evDate" class="path-input" style="font-family: inherit;">
+                    </div>
+                    <div>
+                        <label class="path-label">จำนวน</label>
+                        <input type="number" id="evQuantity" class="path-input" placeholder="จำนวนสินค้า">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <label class="path-label">บาร์โค้ด (ถ้ามี)</label>
+                    <input type="text" id="evBarcode" class="path-input" placeholder="สแกนหรือพิมพ์บาร์โค้ด">
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label class="path-label">อัปโหลดรูปภาพ</label>
+                    <div class="dropzone" id="evImageDropzone" style="min-height: 120px; border-width: 1px; padding: 10px;">
+                        <div class="dropzone-text" style="pointer-events: none;">
+                            <span style="font-size: 24px;">📸</span>
+                            <p style="margin-bottom: 0;">คลิก หรือ ลากรูปภาพมาวางที่นี่ (เลือกได้หลายรูป)</p>
+                        </div>
+                        <input type="file" id="evImageInput" class="file-input" accept="image/*" multiple>
+                    </div>
+                    <div id="evImagePreviewContainer" style="display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding-bottom: 5px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEvidenceUploadModal()">ยกเลิก</button>
+                <button class="btn-confirm" onclick="submitEvidence()" id="btnSubmitEvidence">💾 บันทึกหลักฐาน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== IMAGE VIEWER MODAL ==================== -->
+    <div class="modal" id="imageViewerModal" style="z-index: 10100;">
+        <div class="modal-content" style="max-width: 90vw; background: transparent; box-shadow: none; display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 100%; display: flex; justify-content: flex-end; margin-bottom: 10px;">
+                <button class="modal-close" onclick="closeImageViewer()" style="background: rgba(0,0,0,0.5); border-radius: 50%; padding: 5px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <img id="imageViewerImg" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+        </div>
+    </div>
+
     <!-- ==================== SHUTDOWN OVERLAY ==================== -->
     <div class="shutdown-overlay" id="shutdownOverlay">
         <span style="font-size: 56px; margin-bottom: 8px;">🔴</span>
@@ -1957,6 +2061,7 @@
     <script src="code-data.js"></script>
     <script src="script.js"></script>
     <script src="ai_stock.js"></script>
+    <script src="evidence.js"></script>
     <script>
         // Header gear toggle
         document.getElementById('headerGearBtn').addEventListener('click', function () {

@@ -1,0 +1,57 @@
+{
+    "records": [
+        {
+            "id": "fa3d60bd-4c46-47d8-9d42-80c7fb06d260",
+            "branch": "K1",
+            "date": "2026-09-03",
+            "month": "2026-09",
+            "product_name": "มิตรผลขาว1k*B*.",
+            "quantity": "50",
+            "barcode": "",
+            "images": [
+                "evidence/K1/2026-09/2026-09-03/fa3d60bd-4c46-47d8-9d42-80c7fb06d260_0.jpg",
+                "evidence/K1/2026-09/2026-09-03/fa3d60bd-4c46-47d8-9d42-80c7fb06d260_1.jpg"
+            ],
+            "created_at": "2026-09-04T09:43:57.974641"
+        },
+        {
+            "id": "5d190e80-3403-4eb5-b429-ceae63e27fec",
+            "branch": "K1",
+            "date": "2026-09-03",
+            "month": "2026-09",
+            "product_name": "เนสกาแฟ กป.180 ลาเต้",
+            "quantity": "30",
+            "barcode": "",
+            "images": [
+                "evidence/K1/2026-09/2026-09-03/5d190e80-3403-4eb5-b429-ceae63e27fec_0.jpg"
+            ],
+            "created_at": "2026-09-04T09:46:15.177641"
+        },
+        {
+            "id": "b1c41d66-2edd-4647-880b-173e905a4f4b",
+            "branch": "K1",
+            "date": "2026-09-02",
+            "month": "2026-09",
+            "product_name": "ไวตามิลค์250โลว์ซูการ์",
+            "quantity": "30",
+            "barcode": "",
+            "images": [
+                "evidence/K1/2026-09/2026-09-02/b1c41d66-2edd-4647-880b-173e905a4f4b_0.jpg"
+            ],
+            "created_at": "2026-09-04T10:08:10.286353"
+        },
+        {
+            "id": "dba4f3eb-d1ad-4677-b69d-8d04290d65ff",
+            "branch": "K1",
+            "date": "2026-09-02",
+            "month": "2026-09",
+            "product_name": "มิตรผลขาว1k*B*.",
+            "quantity": "50",
+            "barcode": "",
+            "images": [
+                "evidence/K1/2026-09/2026-09-02/dba4f3eb-d1ad-4677-b69d-8d04290d65ff_0.jpg"
+            ],
+            "created_at": "2026-09-04T10:13:48.699005"
+        }
+    ]
+}

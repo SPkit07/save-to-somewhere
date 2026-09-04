@@ -29,9 +29,10 @@ except ImportError:
 try:
     from config import BRANCH_NAMES
     from logger import setup_logger
+    import evidence_processor
 except ImportError as e:
     print(f"❌ Import error: {e}")
-    print("Make sure config.py, logger.py, processors.py exist in the same directory")
+    print("Make sure config.py, logger.py, processors.py, evidence_processor.py exist in the same directory")
     sys.exit(1)
 
 # ==================== SETUP ====================
