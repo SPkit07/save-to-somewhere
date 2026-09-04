@@ -404,41 +404,54 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         if enable_export_analysis:
             if progress_callback: progress_callback(75, "กำลังวิเคราะห์ Ghost Stock & Dead Stock...")
             max_global_date = df['DATE'].max()
-            # FIX: Only look at the absolute last row per product, ignoring unit changes
-            df['is_last_row'] = ~df.duplicated(subset=['product_id'], keep='last')
             
-            # Extract just the last rows to merge our flags onto
-            last_rows = df[df['is_last_row']][['product_id', 'unit', 'DATE', 'balances', 'import']].copy()
-            
-            # --- Export Stats ---
+            # --- Export Stats (by product_id) ---
             sales_events = df[df['export'] > 0].copy()
             if not sales_events.empty:
-                sales_events['prev_export_date'] = sales_events.groupby(['product_id', 'unit'])['DATE'].shift(1)
+                sales_events = sales_events.sort_values(['product_id', 'DATE'])
+                sales_events['prev_export_date'] = sales_events.groupby('product_id')['DATE'].shift(1)
                 sales_events['inter_sale_days'] = (sales_events['DATE'] - sales_events['prev_export_date']).dt.days
                 
-                export_stats = sales_events.groupby(['product_id', 'unit']).agg(
+                export_stats = sales_events.groupby('product_id').agg(
                     last_export_date=('DATE', 'max'),
                     median_inter_sale_days=('inter_sale_days', 'median')
                 ).reset_index()
             else:
-                export_stats = pd.DataFrame(columns=['product_id', 'unit', 'last_export_date', 'median_inter_sale_days'])
+                export_stats = pd.DataFrame(columns=['product_id', 'last_export_date', 'median_inter_sale_days'])
             
-            # --- Import Stats ---
-            import_events = df[df['import'] > 0].copy()
+            # --- Import Stats (Historical, by product_id) ---
+            import_events = df[(df['import'] > 0) & (~df['is_new_entry'])].copy()
             if not import_events.empty:
-                import_events['prev_import_date'] = import_events.groupby(['product_id', 'unit'])['DATE'].shift(1)
+                import_events = import_events.sort_values(['product_id', 'DATE'])
+                import_events['prev_import_date'] = import_events.groupby('product_id')['DATE'].shift(1)
                 import_events['inbound_gap_days'] = (import_events['DATE'] - import_events['prev_import_date']).dt.days
                 
-                import_stats = import_events.groupby(['product_id', 'unit']).agg(
+                import_stats = import_events.groupby('product_id').agg(
                     last_import_date=('DATE', 'max'),
                     expected_inbound_gap=('inbound_gap_days', 'median')
                 ).reset_index()
             else:
-                import_stats = pd.DataFrame(columns=['product_id', 'unit', 'last_import_date', 'expected_inbound_gap'])
+                import_stats = pd.DataFrame(columns=['product_id', 'last_import_date', 'expected_inbound_gap'])
             
-            # Combine stats with last_rows
-            stats_df = last_rows.merge(export_stats, on=['product_id', 'unit'], how='left')
-            stats_df = stats_df.merge(import_stats, on=['product_id', 'unit'], how='left')
+            # --- Extract Current State ---
+            # Get historical balance
+            historical_df = df[~df['is_new_entry']].sort_values(['product_id', 'DATE'])
+            last_hist = historical_df.drop_duplicates(subset=['product_id'], keep='last')[['product_id', 'balances']].copy()
+            last_hist.rename(columns={'balances': 'hist_balance'}, inplace=True)
+            
+            # Get new entry import amounts
+            new_entries = df[df['is_new_entry']].groupby('product_id')['import'].sum().reset_index()
+            
+            stats_df = new_entries.merge(last_hist, on='product_id', how='left')
+            stats_df['hist_balance'] = stats_df['hist_balance'].fillna(0)
+            stats_df['DATE'] = max_global_date
+            
+            # Use historical balance + new import as current balance for anomaly detection
+            stats_df['balances'] = stats_df['hist_balance']
+            
+            # Combine stats
+            stats_df = stats_df.merge(export_stats, on='product_id', how='left')
+            stats_df = stats_df.merge(import_stats, on='product_id', how='left')
             
             # Clean and fill NaNs
             stats_df['median_inter_sale_days'] = stats_df['median_inter_sale_days'].fillna(2.0)
@@ -451,45 +464,48 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
             stats_df['days_idle'] = (max_global_date - stats_df['last_export_date']).dt.days.fillna(0)
             stats_df['days_since_last_import'] = (stats_df['DATE'] - stats_df['last_import_date']).dt.days.fillna(0)
             
-            # FIX: Ensure idle threshold is at least 90 days to prevent false positives for Dead Stock
             dynamic_idle_threshold = np.maximum(90, np.ceil(stats_df['median_inter_sale_days'] * NORMAL_CYCLE_MULTIPLIER))
             dynamic_recent_sales_threshold = np.maximum(14, stats_df['median_inter_sale_days'] * 1.5)
             
-            # Ghost Stock: idle > threshold, balance > 0, import > 0 (on the last row)
+            # Ghost Stock: idle > threshold, balance > 0, import > 0
             stats_df['is_suspected_ghost'] = (
                 (stats_df['days_idle'] > dynamic_idle_threshold)
                 & (stats_df['balances'] > 0)
                 & (stats_df['import'] > 0)
             )
             
-            # Dead Stock: idle > threshold, balance > 0, import == 0
+            # Dead Stock: idle > threshold, balance > 0, import == 0 (Should not trigger on new receives)
             stats_df['is_dead_last_item'] = (
                 (stats_df['days_idle'] > dynamic_idle_threshold)
                 & (stats_df['balances'] > 0)
                 & (stats_df['import'] == 0)
             )
             
-            # Missing Inbound Bill: hasn't been imported recently, but is actively selling
+            # Missing Inbound Bill
             stats_df['is_missing_inbound_bill'] = (
                 (stats_df['days_since_last_import'] > (stats_df['expected_inbound_gap'] * 2.0))
                 & (stats_df['days_idle'] <= dynamic_recent_sales_threshold)
             )
             
-            # Map back to main df
+            # Map back to main df (Flag the new entry row so it displays correctly)
             df['is_suspected_ghost'] = False
             df['is_dead_last_item'] = False
             df['is_missing_inbound_bill'] = False
+            df['is_last_row'] = df['is_new_entry']
             
-            last_row_indices = df[df['is_last_row']].index
-            df.loc[last_row_indices, 'is_suspected_ghost'] = stats_df['is_suspected_ghost'].values
-            df.loc[last_row_indices, 'is_dead_last_item'] = stats_df['is_dead_last_item'].values
-            df.loc[last_row_indices, 'is_missing_inbound_bill'] = stats_df['is_missing_inbound_bill'].values
+            # Merge flags back
+            flags = stats_df.set_index('product_id')[['is_suspected_ghost', 'is_dead_last_item', 'is_missing_inbound_bill']]
+            df = df.merge(flags, on='product_id', how='left')
+            df['is_suspected_ghost'] = df['is_suspected_ghost_y'].fillna(False) & df['is_last_row']
+            df['is_dead_last_item'] = df['is_dead_last_item_y'].fillna(False) & df['is_last_row']
+            df['is_missing_inbound_bill'] = df['is_missing_inbound_bill_y'].fillna(False) & df['is_last_row']
+            df = df.drop(columns=['is_suspected_ghost_x', 'is_dead_last_item_x', 'is_missing_inbound_bill_x', 'is_suspected_ghost_y', 'is_dead_last_item_y', 'is_missing_inbound_bill_y'], errors='ignore')
 
         else:
             df['is_suspected_ghost'] = False
             df['is_dead_last_item'] = False
             df['is_missing_inbound_bill'] = False
-            df['is_last_row'] = ~df.duplicated(subset=['product_id'], keep='last')
+            df['is_last_row'] = df['is_new_entry']
 
         # ==========================================
         # 4. Extract anomalies
