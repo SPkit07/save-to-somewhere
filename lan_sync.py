@@ -31,6 +31,14 @@ _pending_transfers = {}  # transfer_id -> {"event": threading.Event(), "response
 _pending_lock = threading.Lock()
 
 
+from config import (
+    get_app_config_dir,
+    get_paths_config_path,
+    get_problematic_barcodes_path,
+    get_lan_config_path
+)
+
+
 def get_local_ip() -> str:
     """ดึงหมายเลข IPv4 ของเครื่องในวง LAN"""
     try:
@@ -48,29 +56,96 @@ def get_local_ip() -> str:
             return "127.0.0.1"
 
 
+# ==================== BARCODE STORAGE HELPERS ====================
+
+def read_problematic_barcodes() -> list:
+    """อ่านข้อมูล problematic_barcodes.json จากตำแหน่งที่ถูกต้อง"""
+    paths_to_try = [
+        get_problematic_barcodes_path(),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "problematic_barcodes.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "problematic_barcodes.json"),
+    ]
+    for p in paths_to_try:
+        if p and os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        return data
+            except Exception as e:
+                logger.warning(f"Error reading problematic barcodes from {p}: {e}")
+    return []
+
+
+def write_problematic_barcodes(barcodes: list) -> bool:
+    """บันทึกข้อมูล problematic_barcodes.json ในทุกตำแหน่งที่เกี่ยวข้อง"""
+    success = False
+    paths_to_write = [
+        get_problematic_barcodes_path(),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "problematic_barcodes.json"),
+    ]
+    dist_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "problematic_barcodes.json")
+    if os.path.isdir(os.path.dirname(dist_file)):
+        paths_to_write.append(dist_file)
+
+    for p in set(paths_to_write):
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(barcodes, f, ensure_ascii=False, indent=4)
+            success = True
+        except Exception as e:
+            logger.warning(f"Error writing problematic barcodes to {p}: {e}")
+    return success
+
+
+# ==================== DEVICE OWNER CONFIG ====================
+
 def get_device_owner_name() -> str:
     """ดึงชื่อเจ้าของเครื่อง / ชื่อประจำเครื่อง"""
+    # 1. ตรวจสอบ lan_config.json ก่อน (แยกเฉพาะ LAN เพื่อความปลอดภัยจากการถูก overwrite)
+    lan_cfg_file = get_lan_config_path()
     try:
-        from main import load_paths_config
-        config = load_paths_config()
-        owner = config.get("device_owner_name")
-        if owner and owner.strip():
-            return owner.strip()
+        if os.path.exists(lan_cfg_file):
+            with open(lan_cfg_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                val = data.get("device_owner_name")
+                if val and str(val).strip():
+                    return str(val).strip()
     except Exception as e:
-        logger.warning(f"Could not load device owner name from config: {e}")
+        logger.debug(f"Could not read from lan_config.json: {e}")
 
-    # Fallback to dist config if available
+    # 2. ตรวจสอบ paths_config.json ใน runtime folder
+    paths_cfg_file = get_paths_config_path()
     try:
-        dist_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "paths_config.json")
-        if os.path.exists(dist_cfg):
-            with open(dist_cfg, "r", encoding="utf-8") as f:
-                d = json.load(f)
-                if d.get("device_owner_name") and d.get("device_owner_name").strip():
-                    return d.get("device_owner_name").strip()
-    except Exception:
-        pass
+        if os.path.exists(paths_cfg_file):
+            with open(paths_cfg_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                val = data.get("device_owner_name")
+                if val and str(val).strip():
+                    return str(val).strip()
+    except Exception as e:
+        logger.debug(f"Could not read from paths_config.json: {e}")
 
-    # Default to Windows username or hostname
+    # 3. ตรวจสอบ root และ dist paths_config.json
+    fallback_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "paths_config.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "lan_config.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "paths_config.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "lan_config.json"),
+    ]
+    for fp in fallback_paths:
+        if os.path.exists(fp):
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    val = data.get("device_owner_name")
+                    if val and str(val).strip():
+                        return str(val).strip()
+            except Exception:
+                pass
+
+    # 4. Default to Windows username or hostname
     username = os.environ.get("USERNAME") or os.environ.get("USER") or ""
     hostname = socket.gethostname()
     if username:
@@ -79,53 +154,83 @@ def get_device_owner_name() -> str:
 
 
 def save_device_owner_name(name: str) -> bool:
-    """บันทึกชื่อเจ้าของเครื่อง (ทั้งใน root และ dist config)"""
+    """บันทึกชื่อเจ้าของเครื่อง (ทั้งใน lan_config.json และ paths_config.json ทุกตำแหน่ง)"""
     clean_name = str(name).strip()
     if not clean_name:
         return False
 
     saved_any = False
 
-    # 1. Update via main.save_paths_config
+    # 1. บันทึกลง lan_config.json ใน runtime directory
     try:
-        from main import load_paths_config, save_paths_config
-        config = load_paths_config()
-        config["device_owner_name"] = clean_name
-        if save_paths_config(config):
-            saved_any = True
-    except Exception as e:
-        logger.warning(f"save_paths_config failed: {e}")
-
-    # 2. Save directly to dist/ExcelProcessor/paths_config.json
-    dist_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "paths_config.json")
-    if os.path.exists(os.path.dirname(dist_cfg)):
-        try:
-            dist_data = {}
-            if os.path.exists(dist_cfg):
-                with open(dist_cfg, "r", encoding="utf-8") as f:
-                    dist_data = json.load(f)
-            dist_data["device_owner_name"] = clean_name
-            with open(dist_cfg, "w", encoding="utf-8") as f:
-                json.dump(dist_data, f, ensure_ascii=False, indent=4)
-            saved_any = True
-        except Exception as e:
-            logger.warning(f"Writing dist paths_config.json failed: {e}")
-
-    # 3. Save directly to root paths_config.json
-    root_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "paths_config.json")
-    try:
-        root_data = {}
-        if os.path.exists(root_cfg):
-            with open(root_cfg, "r", encoding="utf-8") as f:
-                root_data = json.load(f)
-        root_data["device_owner_name"] = clean_name
-        with open(root_cfg, "w", encoding="utf-8") as f:
-            json.dump(root_data, f, ensure_ascii=False, indent=4)
+        lan_cfg = get_lan_config_path()
+        lan_data = {}
+        if os.path.exists(lan_cfg):
+            try:
+                with open(lan_cfg, "r", encoding="utf-8") as f:
+                    lan_data = json.load(f)
+            except Exception:
+                lan_data = {}
+        lan_data["device_owner_name"] = clean_name
+        with open(lan_cfg, "w", encoding="utf-8") as f:
+            json.dump(lan_data, f, ensure_ascii=False, indent=4)
         saved_any = True
     except Exception as e:
-        logger.warning(f"Writing root paths_config.json failed: {e}")
+        logger.warning(f"Error saving to lan_config.json: {e}")
 
-    logger.info(f"✅ Device owner name saved: {clean_name}")
+    # 2. บันทึกลง paths_config.json ใน runtime directory
+    try:
+        paths_cfg = get_paths_config_path()
+        paths_data = {}
+        if os.path.exists(paths_cfg):
+            try:
+                with open(paths_cfg, "r", encoding="utf-8") as f:
+                    paths_data = json.load(f)
+            except Exception:
+                paths_data = {}
+        paths_data["device_owner_name"] = clean_name
+        with open(paths_cfg, "w", encoding="utf-8") as f:
+            json.dump(paths_data, f, ensure_ascii=False, indent=4)
+        saved_any = True
+    except Exception as e:
+        logger.warning(f"Error saving to paths_config.json: {e}")
+
+    # 3. บันทึกซิงค์ไปยัง root directory
+    root_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "paths_config.json")
+    try:
+        r_data = {}
+        if os.path.exists(root_cfg):
+            try:
+                with open(root_cfg, "r", encoding="utf-8") as f:
+                    r_data = json.load(f)
+            except Exception:
+                r_data = {}
+        r_data["device_owner_name"] = clean_name
+        with open(root_cfg, "w", encoding="utf-8") as f:
+            json.dump(r_data, f, ensure_ascii=False, indent=4)
+        saved_any = True
+    except Exception as e:
+        logger.warning(f"Error saving to root paths_config.json: {e}")
+
+    # 4. บันทึกซิงค์ไปยัง dist directory ถ้ามี
+    dist_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "paths_config.json")
+    if os.path.isdir(os.path.dirname(dist_cfg)):
+        try:
+            d_data = {}
+            if os.path.exists(dist_cfg):
+                try:
+                    with open(dist_cfg, "r", encoding="utf-8") as f:
+                        d_data = json.load(f)
+                except Exception:
+                    d_data = {}
+            d_data["device_owner_name"] = clean_name
+            with open(dist_cfg, "w", encoding="utf-8") as f:
+                json.dump(d_data, f, ensure_ascii=False, indent=4)
+            saved_any = True
+        except Exception as e:
+            logger.warning(f"Error saving to dist paths_config.json: {e}")
+
+    logger.info(f"✅ Device owner name successfully saved: '{clean_name}'")
     return saved_any
 
 
@@ -134,60 +239,122 @@ def save_device_owner_name(name: str) -> bool:
 def merge_problematic_barcodes(incoming_barcodes: list) -> dict:
     """
     ผสานรายการบาร์โค้ดที่มีปัญหา:
-    - ถ้าบาร์โค้ดซ้ำ ให้รวมข้อมูลและอัปเดตข้อมูลล่าสุด
-    - ถ้าเป็นบาร์โค้ดใหม่ ให้นำไปต่อท้าย
+    - ถ้าบาร์โค้ดมีอยู่แล้ว (ซ้ำ): รวมข้อมูล (Merge)
+      * รวม error message: หากข้อความใหม่ต่างจากของเดิม ให้นำมารวมกันด้วย ' | ' (ไม่ซ้ำซ้อน)
+      * อัปเดต/รวม recommended: หากของใหม่มีคำแนะนำ และเดิมไม่มีหรือต่างกัน
+      * ปรับปรุง name: หากของใหม่มีชื่อ และเดิมไม่มี หรือชื่อเดิมสั้นกว่า
+    - ถ้ายังไม่มี: นำไปต่อท้าย (Append/Add)
+    - กำจัดรายการซ้ำซ้อนในไฟล์เดิม (Deduplicate)
     """
-    from main import load_problematic_barcodes, save_problematic_barcodes
+    existing = read_problematic_barcodes()
     
-    existing = load_problematic_barcodes()
-    existing_map = {}
-    
-    # Map by barcode
-    for idx, item in enumerate(existing):
+    # ดำเนินการสร้าง clean existing map โดยกำจัดตัวซ้ำเดิมใน existing ก่อน
+    existing_map = {}  # barcode -> index ใน clean_list
+    clean_existing = []
+
+    for item in existing:
+        if not isinstance(item, dict):
+            continue
         b = str(item.get("barcode", "")).strip()
-        if b:
-            existing_map[b] = idx
-            
+        if not b:
+            continue
+        if b in existing_map:
+            # รวมตัวซ้ำที่มีอยู่เดิมเข้าด้วยกัน
+            idx = existing_map[b]
+            cur = clean_existing[idx]
+            old_err = cur.get("error", "").strip()
+            item_err = item.get("error", "").strip()
+            if item_err and item_err != old_err and item_err not in old_err:
+                cur["error"] = f"{old_err} | {item_err}" if old_err else item_err
+            if item.get("recommended") and not cur.get("recommended"):
+                cur["recommended"] = item.get("recommended")
+            if item.get("name") and not cur.get("name"):
+                cur["name"] = item.get("name")
+            clean_existing[idx] = cur
+        else:
+            clean_existing.append({
+                "name": str(item.get("name", "")).strip(),
+                "barcode": b,
+                "error": str(item.get("error", "")).strip(),
+                "recommended": str(item.get("recommended", "")).strip()
+            })
+            existing_map[b] = len(clean_existing) - 1
+
     added_count = 0
     updated_count = 0
-    
+
     for inc in incoming_barcodes:
+        if not isinstance(inc, dict):
+            continue
         b = str(inc.get("barcode", "")).strip()
         if not b:
             continue
-            
+
+        inc_name = str(inc.get("name", "")).strip()
+        inc_error = str(inc.get("error", "")).strip()
+        inc_recommended = str(inc.get("recommended", "")).strip()
+
         if b in existing_map:
-            # ซ้ำ -> อัปเดตข้อมูล / รวมข้อความ
+            # มีอยู่แล้ว -> รวมข้อมูล (Merge)
             idx = existing_map[b]
-            cur = existing[idx]
-            # รวม error message ถ้าไม่เหมือนกัน
+            cur = clean_existing[idx]
+            was_modified = False
+
+            # รวม error message
             old_err = cur.get("error", "").strip()
-            new_err = inc.get("error", "").strip()
-            if new_err and new_err != old_err and new_err not in old_err:
-                cur["error"] = f"{old_err} | {new_err}" if old_err else new_err
-                
-            # อัปเดตชื่อหรือคำแนะนำถ้ามี
-            if inc.get("recommended") and not cur.get("recommended"):
-                cur["recommended"] = inc.get("recommended")
-            if inc.get("name") and not cur.get("name"):
-                cur["name"] = inc.get("name")
-                
-            existing[idx] = cur
-            updated_count += 1
+            if inc_error:
+                if not old_err:
+                    cur["error"] = inc_error
+                    was_modified = True
+                elif inc_error != old_err and inc_error not in old_err:
+                    # ถ้า old_err อยู่ใน inc_error ให้ใช้ inc_error ที่ละเอียดกว่า
+                    if old_err in inc_error:
+                        cur["error"] = inc_error
+                    else:
+                        cur["error"] = f"{old_err} | {inc_error}"
+                    was_modified = True
+
+            # รวม / อัปเดต recommended
+            old_rec = cur.get("recommended", "").strip()
+            if inc_recommended:
+                if not old_rec:
+                    cur["recommended"] = inc_recommended
+                    was_modified = True
+                elif inc_recommended != old_rec and inc_recommended not in old_rec:
+                    if old_rec in inc_recommended:
+                        cur["recommended"] = inc_recommended
+                    else:
+                        cur["recommended"] = f"{old_rec} | {inc_recommended}"
+                    was_modified = True
+
+            # ปรับปรุงชื่อสินค้า
+            old_name = cur.get("name", "").strip()
+            if inc_name and (not old_name or len(inc_name) > len(old_name)):
+                cur["name"] = inc_name
+                was_modified = True
+
+            clean_existing[idx] = cur
+            if was_modified:
+                updated_count += 1
         else:
-            # ไม่ซ้ำ -> นำไปต่อท้าย
-            existing.append({
-                "name": inc.get("name", ""),
+            # ยังไม่มี -> เพิ่มรายการใหม่ (Append)
+            new_entry = {
+                "name": inc_name,
                 "barcode": b,
-                "error": inc.get("error", ""),
-                "recommended": inc.get("recommended", "")
-            })
-            existing_map[b] = len(existing) - 1
+                "error": inc_error,
+                "recommended": inc_recommended
+            }
+            clean_existing.append(new_entry)
+            existing_map[b] = len(clean_existing) - 1
             added_count += 1
-            
-    save_problematic_barcodes(existing)
-    logger.info(f"✅ Merged problematic barcodes: {added_count} added, {updated_count} updated")
-    return {"added": added_count, "updated": updated_count, "total": len(existing)}
+
+    write_problematic_barcodes(clean_existing)
+    logger.info(f"✅ Merged problematic barcodes: {added_count} added, {updated_count} merged/updated, total {len(clean_existing)}")
+    return {
+        "added": added_count,
+        "updated": updated_count,
+        "total": len(clean_existing)
+    }
 
 
 def merge_evidence(incoming_records: list) -> dict:
@@ -352,84 +519,63 @@ class LANSyncHTTPHandler(BaseHTTPRequestHandler):
                 barcodes_list = payload.get("problematic_barcodes", [])
                 evidence_list = payload.get("evidence_records", [])
                 
-                total_images = sum(len(r.get("images_data", [])) for r in evidence_list)
+                logger.info(f"📥 Received sync request from {sender_owner} ({sender_ip}) - Barcodes: {len(barcodes_list)}, Evidence: {len(evidence_list)}")
                 
-                summary = {
+                # ทำการผสานข้อมูลทันที (Auto-Merge): "หากมีอยู่แล้วให้รวม ถ้าไม่มีก็เพิ่ม"
+                barcode_res = merge_problematic_barcodes(barcodes_list)
+                evidence_res = merge_evidence(evidence_list)
+                
+                # แจ้งเตือน Frontend ผ่าน Eel ให้ทราบและรีเฟรชหน้าจอ
+                sync_summary = {
                     "transfer_id": transfer_id,
                     "sender_owner": sender_owner,
                     "sender_device": sender_device,
                     "sender_ip": sender_ip,
-                    "barcodes_count": len(barcodes_list),
-                    "evidence_count": len(evidence_list),
-                    "images_count": total_images,
-                    "barcodes_preview": barcodes_list[:5],
-                    "evidence_preview": [{
-                        "product_name": r.get("product_name"),
-                        "branch": r.get("branch"),
-                        "date": r.get("date"),
-                        "images_count": len(r.get("images_data", []))
-                    } for r in evidence_list[:5]]
+                    "barcodes": barcode_res,
+                    "evidence": evidence_res
                 }
                 
-                # Create synchronization event
-                transfer_event = threading.Event()
-                with _pending_lock:
-                    _pending_transfers[transfer_id] = {
-                        "event": transfer_event,
-                        "accepted": False,
-                        "payload": payload,
-                        "timestamp": time.time()
-                    }
-                    
-                # Call Eel to notify frontend and show modal popup
-                logger.info(f"📥 Received sync request from {sender_owner} ({sender_ip}) - ID: {transfer_id}")
                 try:
-                    if 'eel' in globals() and hasattr(eel, 'show_incoming_sync_modal'):
-                        eel.show_incoming_sync_modal(summary)
+                    if hasattr(eel, 'on_lan_sync_completed'):
+                        eel.on_lan_sync_completed(sync_summary)()
                 except Exception as err:
-                    logger.error(f"Error notifying frontend of incoming sync: {err}")
-                    
-                # Wait for user action on the receiver modal (up to 90 seconds timeout)
-                responded = transfer_event.wait(timeout=90.0)
-                
-                with _pending_lock:
-                    transfer_info = _pending_transfers.pop(transfer_id, None)
-                    
-                if not responded:
-                    logger.warning(f"⌛ Transfer request {transfer_id} timed out without user response")
-                    self._send_json(408, {"status": "timeout", "message": "หมดเวลารอการตอบรับจากเครื่องปลายทาง (90s)"})
-                    return
-                    
-                if transfer_info and transfer_info.get("accepted"):
-                    # Process Merge
-                    barcode_res = merge_problematic_barcodes(barcodes_list)
-                    evidence_res = merge_evidence(evidence_list)
-                    
-                    # Refresh frontend views
-                    try:
-                        if hasattr(eel, 'on_lan_sync_completed'):
-                            eel.on_lan_sync_completed({
-                                "barcodes": barcode_res,
-                                "evidence": evidence_res
-                            })
-                    except Exception as err:
-                        logger.debug(f"Could not trigger frontend refresh callback: {err}")
-                        
-                    self._send_json(200, {
-                        "status": "accepted",
-                        "message": "รวมข้อมูลเรียบร้อยแล้ว",
-                        "barcodes_result": barcode_res,
-                        "evidence_result": evidence_res
-                    })
-                else:
-                    self._send_json(200, {
-                        "status": "rejected",
-                        "message": "เครื่องปลายทางปฏิเสธการรับข้อมูล"
-                    })
-                    
+                    logger.debug(f"Frontend notification error (Eel): {err}")
+
+                try:
+                    if hasattr(eel, 'show_incoming_sync_modal'):
+                        eel.show_incoming_sync_modal({
+                            "transfer_id": transfer_id,
+                            "sender_owner": sender_owner,
+                            "sender_device": sender_device,
+                            "sender_ip": sender_ip,
+                            "barcodes_count": len(barcodes_list),
+                            "evidence_count": len(evidence_list),
+                            "images_count": sum(len(r.get("images_data", [])) for r in evidence_list),
+                            "barcodes_preview": barcodes_list[:5],
+                            "evidence_preview": [{
+                                "product_name": r.get("product_name"),
+                                "branch": r.get("branch"),
+                                "date": r.get("date"),
+                                "images_count": len(r.get("images_data", []))
+                            } for r in evidence_list[:5]],
+                            "auto_merged": True
+                        })()
+                except Exception as err:
+                    logger.debug(f"Receiver modal error (Eel): {err}")
+
+                # ส่งผลลัพธ์การรวมข้อมูลกลับไปให้เครื่องผู้ส่งทันที
+                msg = f"รวมข้อมูลเรียบร้อยแล้ว: เพิ่มบาร์โค้ด {barcode_res.get('added', 0)} รายการ, รวมบาร์โค้ดเดิม {barcode_res.get('updated', 0)} รายการ, บันทึกรูปหลักฐาน {evidence_res.get('images_saved', 0)} รูป"
+                self._send_json(200, {
+                    "status": "accepted",
+                    "message": msg,
+                    "barcodes_result": barcode_res,
+                    "evidence_result": evidence_res
+                })
+                logger.info(f"✅ Sync request processed successfully: {msg}")
+
             except Exception as e:
                 logger.error(f"Error handling sync request: {e}", exc_info=True)
-                self._send_json(500, {"status": "error", "message": str(e)})
+                self._send_json(500, {"status": "error", "message": f"ข้อผิดพลาดขณะรวมข้อมูล: {str(e)}"})
         else:
             self._send_json(404, {"error": "Not found"})
 
@@ -555,6 +701,7 @@ def scan_lan_devices() -> list:
     # 1. UDP Broadcast Scan
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.settimeout(1.2)
         
@@ -608,7 +755,7 @@ def scan_lan_devices() -> list:
 
         threads = []
         curr_num = int(parts[3])
-        scan_range = [i for i in range(max(1, curr_num - 20), min(255, curr_num + 21)) if i != curr_num]
+        scan_range = [i for i in range(max(1, curr_num - 25), min(255, curr_num + 26)) if i != curr_num]
         for num in scan_range:
             t = threading.Thread(target=_check_ip, args=(num,))
             threads.append(t)
@@ -622,13 +769,13 @@ def scan_lan_devices() -> list:
 
 @eel.expose
 def respond_incoming_sync(transfer_id: str, accept: bool) -> bool:
-    """ผู้รับกดปุ่ม 'ยอมรับ' หรือ 'ปฏิเสธ' บน Modal"""
+    """ผู้รับกดปุ่มบน Modal (รองรับกรณีมีการตอบกลับ)"""
     with _pending_lock:
         if transfer_id in _pending_transfers:
             _pending_transfers[transfer_id]["accepted"] = bool(accept)
             _pending_transfers[transfer_id]["event"].set()
             return True
-    return False
+    return True
 
 
 @eel.expose
@@ -638,7 +785,7 @@ def send_lan_sync(target_ip: str, selected_barcodes: list, selected_evidence_ids
     - ดึงข้อมูล barcodes ที่ถูกเลือก
     - ดึงข้อมูล evidence พร้อมแปลงรูปเป็น Base64
     - ส่ง HTTP POST /api/sync/request
-    - รอการตอบรับ
+    - ได้รับการตอบรับทันที
     """
     try:
         clean_ip = str(target_ip).strip().replace("http://", "").replace("https://", "").strip()
@@ -656,9 +803,8 @@ def send_lan_sync(target_ip: str, selected_barcodes: list, selected_evidence_ids
         if not clean_ip:
             return {"success": False, "message": "กรุณาระบุ IP ปลายทาง"}
 
-        # 1. รวบรวมข้อมูลบาร์โค้ด
-        from main import load_problematic_barcodes
-        all_barcodes = load_problematic_barcodes() or []
+        # 1. รวบรวมข้อมูลบาร์โค้ดจากระบบจัดเก็บโดยตรง (ไม่พึ่งพา main.py)
+        all_barcodes = read_problematic_barcodes()
         barcodes_to_send = []
 
         if selected_barcodes:
@@ -740,13 +886,14 @@ def send_lan_sync(target_ip: str, selected_barcodes: list, selected_evidence_ids
                 },
                 method='POST'
             )
-            with urlopen(req, timeout=95.0) as resp:
+            # ข้อมูลถูกผสานทันทีฝั่งปลายทาง ใช้เวลาเพียงไม่กี่วินาที
+            with urlopen(req, timeout=30.0) as resp:
                 res_data = json.loads(resp.read().decode('utf-8'))
 
                 if res_data.get("status") == "accepted":
                     return {
                         "success": True,
-                        "message": "เครื่องปลายทางยอมรับข้อมูลและรวมเรียบร้อยแล้ว",
+                        "message": res_data.get("message", "รวมข้อมูลเข้าสู่เครื่องปลายทางเรียบร้อยแล้ว"),
                         "details": res_data
                     }
                 elif res_data.get("status") == "rejected":
@@ -754,19 +901,12 @@ def send_lan_sync(target_ip: str, selected_barcodes: list, selected_evidence_ids
                         "success": False,
                         "message": "เครื่องปลายทางปฏิเสธการรับข้อมูล"
                     }
-                elif res_data.get("status") == "timeout":
-                    return {
-                        "success": False,
-                        "message": "หมดเวลารอการตอบรับจากเครื่องปลายทาง (90s)"
-                    }
                 else:
                     return {
                         "success": False,
-                        "message": res_data.get("message", "เกิดข้อผิดพลาดในการส่ง")
+                        "message": res_data.get("message", "เกิดข้อผิดพลาดในการส่งข้อมูล")
                     }
         except HTTPError as e:
-            if e.code == 408:
-                return {"success": False, "message": "หมดเวลารอการกดยอมรับจากเครื่องปลายทาง (Timeout 90s)"}
             return {"success": False, "message": f"เซิร์ฟเวอร์ปลายทางแจ้งข้อผิดพลาด: HTTP {e.code}"}
         except URLError as e:
             reason = str(e.reason)

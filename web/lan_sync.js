@@ -59,6 +59,7 @@ async function saveMyOwnerName() {
     const name = input.value.trim();
     if (!name) {
         alert('กรุณากรอกชื่อเครื่อง / ชื่อเจ้าของเครื่อง');
+        input.focus();
         return;
     }
     
@@ -81,7 +82,15 @@ async function saveMyOwnerName() {
                     statusText.style.display = 'block';
                     setTimeout(() => { if (statusText) statusText.style.display = 'none'; }, 4000);
                 }
-                alert(`✅ บันทึกชื่อเครื่อง "${name}" เรียบร้อยแล้ว`);
+
+                // รีโหลดข้อมูลเครื่องเพื่อซิงค์ข้อมูลล่าสุด
+                await loadMyDeviceInfo();
+                
+                if (typeof showStatus === 'function') {
+                    showStatus(`✅ บันทึกชื่อเครื่อง "${name}" เรียบร้อยแล้ว`, 'success');
+                } else {
+                    alert(`✅ บันทึกชื่อเครื่อง "${name}" เรียบร้อยแล้ว`);
+                }
             } else {
                 alert('❌ ไม่สามารถบันทึกชื่อเครื่องได้ (กรุณาลองใหม่อีกครั้ง)');
             }
@@ -494,8 +503,8 @@ function showSendProgressModal(targetIp, barcodeCount, evidenceCount) {
                 <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">กำลังส่งข้อมูลผ่าน LAN...</h3>
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" id="lanSendProgressDetails"></p>
                 <div style="background: var(--surface-alt); padding: 12px; border-radius: 8px; font-size: 12px; color: var(--text); margin-bottom: 16px;">
-                    ⏳ กำลังรอเครื่องปลายทางกดยอมรับบนหน้าจอ...<br>
-                    <span style="color: var(--text-muted); font-size: 11px;">(มีเวลารอสูงสุด 90 วินาที)</span>
+                    ⚡ กำลังส่งและผสานข้อมูลเข้าสู่เครื่องปลายทาง...<br>
+                    <span style="color: #10b981; font-size: 11px; font-weight: 600;">(หากมีอยู่แล้วจะรวม ถ้าไม่มีจะเพิ่มให้อัตโนมัติ)</span>
                 </div>
             </div>
         `;
@@ -523,15 +532,22 @@ function show_incoming_sync_modal(summary) {
     
     let modal = document.getElementById('incomingSyncModal');
     if (!modal) {
-        console.error('incomingSyncModal not found in DOM');
+        console.warn('incomingSyncModal not found in DOM');
         return;
     }
     
     // Fill modal contents
-    document.getElementById('incomingSenderOwner').textContent = summary.sender_owner || 'ไม่ระบุชื่อ';
-    document.getElementById('incomingSenderDevice').textContent = `${summary.sender_device} (${summary.sender_ip})`;
-    document.getElementById('incomingBarcodeCount').textContent = `${summary.barcodes_count} รายการ`;
-    document.getElementById('incomingEvidenceCount').textContent = `${summary.evidence_count} รายการ (${summary.images_count} รูปภาพ)`;
+    const senderOwnerEl = document.getElementById('incomingSenderOwner');
+    if (senderOwnerEl) senderOwnerEl.textContent = summary.sender_owner || 'ไม่ระบุชื่อ';
+    
+    const senderDeviceEl = document.getElementById('incomingSenderDevice');
+    if (senderDeviceEl) senderDeviceEl.textContent = `${summary.sender_device} (${summary.sender_ip})`;
+    
+    const barcodeCountEl = document.getElementById('incomingBarcodeCount');
+    if (barcodeCountEl) barcodeCountEl.textContent = `${summary.barcodes_count} รายการ`;
+    
+    const evidenceCountEl = document.getElementById('incomingEvidenceCount');
+    if (evidenceCountEl) evidenceCountEl.textContent = `${summary.evidence_count} รายการ (${summary.images_count} รูปภาพ)`;
     
     // Preview list
     const previewContainer = document.getElementById('incomingPreviewList');
@@ -561,18 +577,28 @@ function show_incoming_sync_modal(summary) {
     modal.style.display = 'flex';
 }
 
-async function respondIncomingSync(accept) {
-    if (!currentIncomingTransferId) return;
-    
+function closeIncomingSyncModal() {
     const modal = document.getElementById('incomingSyncModal');
     if (modal) modal.style.display = 'none';
+    
+    // Reload all views
+    if (typeof loadProblematicBarcodesFromBackend === 'function') {
+        loadProblematicBarcodesFromBackend();
+    }
+    if (typeof loadEvidenceTree === 'function') {
+        loadEvidenceTree();
+    }
+    loadLanBarcodesList();
+    loadLanEvidenceList();
+}
+
+async function respondIncomingSync(accept) {
+    closeIncomingSyncModal();
+    if (!currentIncomingTransferId) return;
     
     if (typeof eel !== 'undefined' && eel.respond_incoming_sync) {
         try {
             await eel.respond_incoming_sync(currentIncomingTransferId, accept)();
-            if (accept) {
-                showStatus('✅ รวมข้อมูลเข้าสู่เครื่องเรียบร้อยแล้ว', 'success');
-            }
         } catch (e) {
             console.error('Error responding to incoming sync:', e);
         }
@@ -584,6 +610,16 @@ async function respondIncomingSync(accept) {
 eel.expose(on_lan_sync_completed);
 function on_lan_sync_completed(results) {
     console.log('✅ LAN sync completed and merged:', results);
+    
+    // แจ้งเตือนสถานะบนหน้าจอ
+    if (typeof showStatus === 'function') {
+        const sender = results.sender_owner || 'เครื่องอื่นในวง LAN';
+        const bAdded = results.barcodes ? results.barcodes.added : 0;
+        const bUpdated = results.barcodes ? results.barcodes.updated : 0;
+        const imgs = results.evidence ? results.evidence.images_saved : 0;
+        showStatus(`📥 ได้รับข้อมูลจาก "${sender}": เพิ่มบาร์โค้ด ${bAdded} รายการ, รวมบาร์โค้ด ${bUpdated} รายการ, รูปภาพ ${imgs} รูป เรียบร้อยแล้ว`, 'success');
+    }
+    
     // Reload Problematic barcodes if on Tab 3
     if (typeof loadProblematicBarcodesFromBackend === 'function') {
         loadProblematicBarcodesFromBackend();

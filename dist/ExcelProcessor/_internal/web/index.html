@@ -2216,8 +2216,8 @@
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 12px;">
                 <span style="font-size: 32px;">📥</span>
                 <div>
-                    <h2 style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text);">มีคำขอส่งข้อมูลผ่าน LAN</h2>
-                    <div style="font-size: 12px; color: var(--text-muted);">เครื่องอื่นในวงแลนกำลังส่งข้อมูลมายังเครื่องของคุณ</div>
+                    <h2 style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text);">ได้รับข้อมูลผ่าน LAN เรียบร้อยแล้ว</h2>
+                    <div style="font-size: 12px; color: var(--text-muted);">ระบบได้รวมข้อมูลบาร์โค้ดและรูปภาพหลักฐานเข้าสู่เครื่องนี้แล้ว</div>
                 </div>
             </div>
 
@@ -2245,15 +2245,12 @@
             </div>
 
             <div style="font-size: 12px; color: #10b981; margin-bottom: 18px; display: flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 6px;">
-                <span>💡</span> ข้อมูลจะถูกนำไปต่อท้ายและรวมเข้ากับเครื่องนี้โดยอัตโนมัติ (ไม่ลบของเดิม)
+                <span>✅</span> ข้อมูลถูกนำไปรวมเข้ากับเครื่องนี้เรียบร้อยแล้ว (หากมีอยู่แล้วจะรวม ถ้าไม่มีจะเพิ่ม)
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button class="btn-cancel" onclick="respondIncomingSync(false)" style="padding: 10px 18px; font-size: 13px;">
-                    ❌ ปฏิเสธ
-                </button>
-                <button class="save-btn" onclick="respondIncomingSync(true)" style="margin: 0; min-width: auto; padding: 10px 22px; font-size: 13px; background: #10b981;">
-                    ✅ กดยอมรับและรวมข้อมูล
+                <button class="save-btn" onclick="closeIncomingSyncModal()" style="margin: 0; min-width: auto; padding: 10px 24px; font-size: 13px; background: #10b981;">
+                    👌 รับทราบ / ตกลง
                 </button>
             </div>
         </div>

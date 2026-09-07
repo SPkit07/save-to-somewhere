@@ -1,25 +1,5 @@
 {
-    "11": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K1\\ไฟล์รับข้อมูลของ SP",
-    "21": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K2\\ไฟล์รับข้อมูลของ SP",
-    "31": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K3\\ไฟล์รับข้อมูลของ SP",
-    "41": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K4\\ไฟล์รับข้อมูลของ SP",
-    "51": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K5\\ไฟล์รับข้อมูลของ SP",
-    "partA": "Z:\\ไดรฟ์ของฉัน\\KMART(ใช้งาน)",
-    "partB": "Z:\\ไดรฟ์ของฉัน\\SP",
-    "savePathK1": "C:/Users/KS/Desktop/SP-DS/K mart 1",
-    "savePathK2": "C:/Users/KS/Desktop/SP-DS/K mart 2",
-    "savePathK3": "C:/Users/KS/Desktop/SP-DS/K mart 3",
-    "savePathK4": "C:/Users/KS/Desktop/SP-DS/K mart 4",
-    "savePathK5": "C:/Users/KS/Desktop/SP-DS/K mart 5",
-    "savePathSP": "C:/Users/KS/Desktop/SP-DS/Super",
-    "11_00": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K1\\ไฟล์รับข้อมูลของ WH",
-    "21_00": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K2\\ไฟล์รับข้อมูลของ WH",
-    "31_00": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K3\\ไฟล์รับข้อมูลของ WH",
-    "41_00": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K4\\ไฟล์รับข้อมูลของ WH",
-    "51_00": "Y:\\ไดรฟ์ของฉัน\\Dfiiข้อมูลBplus(ใชงาน)\\ไฟล์รับข้อมูล(ใช้งาน)\\K5\\ไฟล์รับข้อมูลของ WH",
-    "SP": "Y:\\\\ไดรฟ์ของฉัน\\\\Dfiiข้อมูลBplus(ใชงาน)\\\\ไฟล์รับข้อมูล(ใช้งาน)\\\\SP",
-    "null": "Z:\\ไดรฟ์ของฉัน\\SP",
-    "selected_exe_path": "D:/dist/ExcelProcessor/ExcelProcessor.exe",
-    "aiStockFolder": "Y:/ไดรฟ์ของฉัน/Data analyst/สต็อกการ์ด",
-    "device_owner_name": "สมชาย - คลังสินค้า"
+    "aiStockFolder": "C:/Users/USER/Desktop/New folder",
+    "selected_exe_path": "C:/Users/USER/Desktop/save-to-somewhere-master/dist/ExcelProcessor/ExcelProcessor.exe",
+    "device_owner_name": "Kit"
 }
