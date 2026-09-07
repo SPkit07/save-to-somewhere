@@ -5,6 +5,14 @@ import logging
 import sys
 from config import LOG_LEVEL, DEBUG
 
+# Configure UTF-8 encoding on Windows to support emojis and Thai characters safely
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, 'reconfigure'):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
 # ==================== SETUP LOGGER ====================
 def setup_logger(name: str) -> logging.Logger:
     """Setup logger with console output"""

@@ -840,11 +840,20 @@ function switchTab(tabName) {
         'processor': 'tabBtnProcessor',
         'bill-processor': 'tabBtnBillProcessor',
         'code': 'tabBtnCode',
-        'ai-stock': 'tabBtnAiStock'
+        'ai-stock': 'tabBtnAiStock',
+        'evidence': 'tabBtnEvidence',
+        'lan-sync': 'tabBtnLanSync'
     };
     const activeBtn = document.getElementById(tabBtnMap[tabName]);
     if (activeBtn) {
         activeBtn.classList.add('active');
+    }
+
+    // Tab specific refreshes
+    if (tabName === 'lan-sync') {
+        if (typeof loadLanBarcodesList === 'function') loadLanBarcodesList();
+        if (typeof loadLanEvidenceList === 'function') loadLanEvidenceList();
+        if (typeof loadMyDeviceInfo === 'function') loadMyDeviceInfo();
     }
 }
 

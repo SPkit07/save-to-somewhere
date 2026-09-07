@@ -30,9 +30,10 @@ try:
     from config import BRANCH_NAMES
     from logger import setup_logger
     import evidence_processor
+    import lan_sync
 except ImportError as e:
     print(f"❌ Import error: {e}")
-    print("Make sure config.py, logger.py, processors.py, evidence_processor.py exist in the same directory")
+    print("Make sure config.py, logger.py, processors.py, evidence_processor.py, lan_sync.py exist in the same directory")
     sys.exit(1)
 
 # ==================== SETUP ====================
@@ -1161,6 +1162,12 @@ def start_app():
     logger.info("="*60)
     
     try:
+        # เริ่มการทำงานของเซิร์ฟเวอร์ LAN ใน Background
+        try:
+            lan_sync.start_lan_sync_server()
+        except Exception as e:
+            logger.warning(f"Could not start LAN sync server: {e}")
+
         # เปิด UI ที่ port ค่าเริ่มต้น (ใช้ port random เพื่อหลีกเลี่ยง conflict)
         window_state = load_window_state()
 

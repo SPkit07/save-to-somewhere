@@ -14,9 +14,14 @@ def get_evidence_base_dir() -> str:
     When compiled with PyInstaller, this is the folder where the .exe file lives.
     """
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
+        exe_dir = os.path.dirname(sys.executable)
+        if os.path.isdir(os.path.join(exe_dir, "_internal", "evidence")):
+            return os.path.join(exe_dir, "_internal")
+        return exe_dir
     # Check if dist/ExcelProcessor exists (compiled output)
     dist_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor")
+    if os.path.isdir(os.path.join(dist_dir, "_internal", "evidence")):
+        return os.path.join(dist_dir, "_internal")
     if os.path.isdir(dist_dir):
         return dist_dir
     return os.path.dirname(os.path.abspath(__file__))
@@ -121,6 +126,16 @@ def save_evidence(branch: str, date_str: str, product_name: str, quantity: str, 
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 @eel.expose
+def get_all_evidence_records():
+    """Get all evidence records for LAN sync or UI"""
+    try:
+        db = load_db()
+        return {"success": True, "records": db.get("records", [])}
+    except Exception as e:
+        logger.error(f"Error getting all evidence records: {e}")
+        return {"success": False, "records": []}
+
+@eel.expose
 def get_evidence_tree():
     try:
         db = load_db()
@@ -223,13 +238,20 @@ def get_image_base64(rel_path: str):
     """
     try:
         rel_clean = rel_path.replace("/", os.sep)
-        # Primary path (beside .exe)
-        abs_path = os.path.join(get_evidence_base_dir(), rel_clean)
-        if not os.path.exists(abs_path):
-            # Fallback path (inside _internal)
-            fallback_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_clean)
-            if os.path.exists(fallback_path):
-                abs_path = fallback_path
+        base_dir = get_evidence_base_dir()
+        candidate_paths = [
+            os.path.join(base_dir, rel_clean),
+            os.path.join(base_dir, "_internal", rel_clean),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_clean),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "_internal", rel_clean),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", "_internal", rel_clean),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor", rel_clean),
+        ]
+        abs_path = None
+        for cp in candidate_paths:
+            if os.path.exists(cp):
+                abs_path = cp
+                break
 
         if os.path.exists(abs_path):
             with open(abs_path, "rb") as fh:
