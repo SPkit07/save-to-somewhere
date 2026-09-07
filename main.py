@@ -797,45 +797,68 @@ def restart_application() -> None:
 @eel.expose
 def get_recent_exe_files() -> list:
     """
-    ค้นหาไฟล์ .exe ที่ใหม่ล่าสุดในโฟลเดอร์ปัจจุบัน dist และ build
-    รีเทิร์นรายการ .exe พร้อมข้อมูล (path, name, modified_time)
+    ค้นหาไฟล์ .exe ที่ใหม่ล่าสุด ทั้งจากโฟลเดอร์ที่กำลังรัน .exe, dist, build, โฟลเดอร์ปัจจุบัน
+    รีเทิร์นรายการ .exe พร้อมข้อมูล (path, name, dir_name, modified_time, size_mb)
+    เรียงตามเวลาแก้ไขล่าสุด (ใหม่สุดอยู่บนสุด)
     """
     import glob
     import os
+    import sys
     
-    exe_list = []
+    found_files = {}  # dict by normalized path
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
     search_dirs = [
-        os.path.dirname(__file__),  # Current directory
-        os.path.join(os.path.dirname(__file__), 'dist'),
-        os.path.join(os.path.dirname(__file__), 'build'),
-        os.path.join(os.path.dirname(__file__), 'dist', 'ExcelProcessor'),
-        os.path.join(os.path.dirname(__file__), 'build', 'ExcelProcessor'),
+        base_dir,
+        os.path.abspath(os.path.join(base_dir, '..')), # Parent dir (กรณีรันใน _internal)
+        os.path.join(base_dir, 'dist'),
+        os.path.join(base_dir, 'build'),
+        os.path.join(base_dir, 'dist', 'ExcelProcessor'),
+        os.path.join(base_dir, 'build', 'ExcelProcessor'),
+        r'D:\dist',
+        r'D:\dist\ExcelProcessor',
     ]
     
+    # ถ้ากำลังรันจากตัว .exe โดยตรง ให้เพิ่มโฟลเดอร์ของ .exe นั้นเป็นลำดับแรก
+    if getattr(sys, 'frozen', False) and sys.executable:
+        current_exe = os.path.abspath(sys.executable)
+        exe_dir = os.path.dirname(current_exe)
+        search_dirs.insert(0, exe_dir)
+        if os.path.exists(current_exe):
+            try:
+                found_files[current_exe.lower()] = {
+                    'path': current_exe,
+                    'name': os.path.basename(current_exe),
+                    'dir_name': os.path.basename(exe_dir),
+                    'mod_time': os.path.getmtime(current_exe),
+                    'size': os.path.getsize(current_exe)
+                }
+            except Exception as e:
+                logger.warning(f"Error checking current sys.executable: {e}")
+
     try:
-        found_files = {}  # dict เพื่อเก็บไฟล์ unique และเลือกเก่าสุด
-        
         for search_dir in search_dirs:
-            if not os.path.isdir(search_dir):
+            if not search_dir or not os.path.isdir(search_dir):
                 continue
             
-            # ค้นหา .exe ไฟล์ในโฟลเดอร์
             for exe_file in glob.glob(os.path.join(search_dir, '*.exe')):
                 try:
-                    file_name = os.path.basename(exe_file)
-                    file_size = os.path.getsize(exe_file)
-                    mod_time = os.path.getmtime(exe_file)
+                    norm_path = os.path.abspath(exe_file)
+                    key = norm_path.lower()
+                    file_name = os.path.basename(norm_path)
+                    file_size = os.path.getsize(norm_path)
+                    mod_time = os.path.getmtime(norm_path)
                     
-                    # เก็บเฉพาะไฟล์ที่มีขนาดใหญ่ (ข้ามไฟล์ installer/uninstaller ขนาดเล็ก)
+                    # ข้ามไฟล์ขนาดเล็ก (installer / helper เล็กๆ)
                     if file_size > 1000000:  # 1MB
-                        key = file_name.lower()
-                        if key not in found_files or found_files[key]['mod_time'] < mod_time:
-                            found_files[key] = {
-                                'path': exe_file,
-                                'name': file_name,
-                                'mod_time': mod_time,
-                                'size': file_size
-                            }
+                        dir_name = os.path.basename(os.path.dirname(norm_path))
+                        found_files[key] = {
+                            'path': norm_path,
+                            'name': file_name,
+                            'dir_name': dir_name,
+                            'mod_time': mod_time,
+                            'size': file_size
+                        }
                 except Exception as e:
                     logger.warning(f"Error processing exe file {exe_file}: {e}")
         
@@ -846,6 +869,7 @@ def get_recent_exe_files() -> list:
         result = [{
             'path': item['path'],
             'name': item['name'],
+            'dir_name': item['dir_name'],
             'modified_time': item['mod_time'],
             'size_mb': round(item['size'] / 1024 / 1024, 2)
         } for item in exe_list]
@@ -891,12 +915,39 @@ def launch_excel_processor_from_path(exe_path: str) -> bool:
 
 @eel.expose
 def get_saved_exe_path() -> str:
-    """Get the last selected .exe path from config."""
+    """Get the last selected .exe path from config, or auto-detect the latest .exe."""
     try:
+        # 1. ถ้ากำลังรันจาก .exe (frozen) ให้ใช้ตัวที่กำลังเปิดอยู่นี้เป็นหลัก
+        if getattr(sys, 'frozen', False) and sys.executable and os.path.exists(sys.executable):
+            return os.path.abspath(sys.executable)
+
         config = load_paths_config()
         saved_path = config.get("selected_exe_path") or config.get("exe_path") or ""
+        
+        # 2. ดึงรายการ .exe ล่าสุดทั้งหมด เรียงจากใหม่สุดไปเก่าสุด
+        recent = get_recent_exe_files()
+        
         if saved_path and os.path.exists(saved_path):
+            # ถ้ามี exe ตัวใหม่กว่าพาธที่เคยบันทึกไว้ ให้สลับมาใช้ตัวใหม่ล่าสุดอัตโนมัติ
+            if recent and os.path.abspath(recent[0]['path']).lower() != os.path.abspath(saved_path).lower():
+                try:
+                    saved_mtime = os.path.getmtime(saved_path)
+                    latest_mtime = recent[0]['modified_time']
+                    if latest_mtime > saved_mtime:
+                        latest_path = recent[0]['path']
+                        logger.info(f"🔄 Switching to newer exe build: {latest_path}")
+                        save_selected_exe_path(latest_path)
+                        return latest_path
+                except Exception:
+                    pass
             return saved_path
+            
+        # 3. ถ้าไม่มี saved_path หรือไฟล์เดิมไม่อยู่แล้ว ให้เลือกตัวใหม่สุดอัตโนมัติ
+        if recent:
+            latest_path = recent[0]['path']
+            save_selected_exe_path(latest_path)
+            return latest_path
+            
         return ""
     except Exception as e:
         logger.warning(f"Error reading saved exe path: {e}")

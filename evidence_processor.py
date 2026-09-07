@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import base64
 import uuid
@@ -7,23 +8,53 @@ from pathlib import Path
 import eel
 from logger import logger
 
-EVIDENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "evidence")
-DB_FILE = os.path.join(EVIDENCE_DIR, "evidence_db.json")
+def get_evidence_base_dir() -> str:
+    """
+    Get the directory where evidence folder should be placed.
+    When compiled with PyInstaller, this is the folder where the .exe file lives.
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    # Check if dist/ExcelProcessor exists (compiled output)
+    dist_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "ExcelProcessor")
+    if os.path.isdir(dist_dir):
+        return dist_dir
+    return os.path.dirname(os.path.abspath(__file__))
+
+def get_evidence_dir() -> str:
+    return os.path.join(get_evidence_base_dir(), "evidence")
+
+def get_db_file() -> str:
+    return os.path.join(get_evidence_dir(), "evidence_db.json")
 
 def init_db():
-    if not os.path.exists(EVIDENCE_DIR):
-        os.makedirs(EVIDENCE_DIR)
-    if not os.path.exists(DB_FILE):
-        with open(DB_FILE, 'w', encoding='utf-8') as f:
-            json.dump({"records": []}, f)
+    evidence_dir = get_evidence_dir()
+    db_file = get_db_file()
+    if not os.path.exists(evidence_dir):
+        os.makedirs(evidence_dir, exist_ok=True)
+    if not os.path.exists(db_file):
+        # Check if there is an existing database inside _internal/evidence to migrate
+        internal_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "evidence", "evidence_db.json")
+        if os.path.exists(internal_db):
+            try:
+                import shutil
+                shutil.copy2(internal_db, db_file)
+            except Exception as e:
+                logger.warning(f"Could not copy existing db from _internal: {e}")
+                with open(db_file, 'w', encoding='utf-8') as f:
+                    json.dump({"records": []}, f)
+        else:
+            with open(db_file, 'w', encoding='utf-8') as f:
+                json.dump({"records": []}, f)
 
 def load_db():
     init_db()
-    with open(DB_FILE, 'r', encoding='utf-8') as f:
+    with open(get_db_file(), 'r', encoding='utf-8') as f:
         return json.load(f)
 
 def save_db(data):
-    with open(DB_FILE, 'w', encoding='utf-8') as f:
+    init_db()
+    with open(get_db_file(), 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 @eel.expose
@@ -40,7 +71,7 @@ def save_evidence(branch: str, date_str: str, product_name: str, quantity: str, 
         month_str = dt.strftime("%Y-%m")
         
         # Create branch/month/date folder
-        target_dir = os.path.join(EVIDENCE_DIR, branch, month_str, date_str)
+        target_dir = os.path.join(get_evidence_dir(), branch, month_str, date_str)
         os.makedirs(target_dir, exist_ok=True)
         
         record_id = str(uuid.uuid4())
@@ -72,47 +103,57 @@ def save_evidence(branch: str, date_str: str, product_name: str, quantity: str, 
             "branch": branch,
             "date": date_str,
             "month": month_str,
-            "product_name": product_name.strip() if product_name else "Unknown",
-            "quantity": str(quantity),
-            "barcode": str(barcode).strip() if barcode else "",
+            "product_name": product_name,
+            "quantity": quantity,
+            "barcode": barcode,
             "images": saved_images,
-            "created_at": datetime.datetime.now().isoformat()
+            "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
         db = load_db()
         db["records"].append(new_record)
         save_db(db)
         
-        logger.info(f"Saved evidence for {product_name} in {branch} on {date_str} with {len(saved_images)} images")
-        return {"success": True, "message": "บันทึกหลักฐานเรียบร้อยแล้ว"}
+        return {"success": True, "message": "บันทึกหลักฐานเรียบร้อยแล้ว", "record": new_record}
         
     except Exception as e:
-        logger.error(f"Error saving evidence: {e}", exc_info=True)
+        logger.error(f"Error saving evidence: {e}")
         return {"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"}
 
 @eel.expose
 def get_evidence_tree():
     try:
         db = load_db()
+        records = db.get("records", [])
+        
+        # Structure: { branch: { month: [day1, day2, ...] } }
         tree = {}
-        for r in db["records"]:
-            b = r.get("branch", "Unknown")
-            m = r.get("month", "Unknown")
-            d = r.get("date", "Unknown")
+        
+        for r in records:
+            branch = r.get("branch", "Unknown")
+            date_str = r.get("date", "")
+            if not date_str:
+                continue
+                
+            month_str = r.get("month", date_str[:7] if len(date_str) >= 7 else "Unknown")
             
-            if b not in tree:
-                tree[b] = {}
-            if m not in tree[b]:
-                tree[b][m] = set()
-            
-            tree[b][m].add(d)
+            if branch not in tree:
+                tree[branch] = {}
+                
+            if month_str not in tree[branch]:
+                tree[branch][month_str] = set()
+                
+            tree[branch][month_str].add(date_str)
             
         # Convert sets to sorted lists
-        for b in tree:
-            for m in tree[b]:
-                tree[b][m] = sorted(list(tree[b][m]), reverse=True)
+        result_tree = {}
+        for b, months in tree.items():
+            result_tree[b] = {}
+            for m, days in months.items():
+                result_tree[b][m] = sorted(list(days), reverse=True)
                 
-        return {"success": True, "tree": tree}
+        return {"success": True, "tree": result_tree}
+        
     except Exception as e:
         logger.error(f"Error getting evidence tree: {e}")
         return {"success": False, "tree": {}}
@@ -121,11 +162,18 @@ def get_evidence_tree():
 def get_evidence_by_date(branch: str, date_str: str):
     try:
         db = load_db()
-        records = [r for r in db["records"] if r.get("branch") == branch and r.get("date") == date_str]
+        records = db.get("records", [])
         
-        # Sort by creation time, newest first
-        records.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-        return {"success": True, "records": records}
+        filtered = [
+            r for r in records 
+            if r.get("branch") == branch and r.get("date") == date_str
+        ]
+        
+        # Sort by creation time desc
+        filtered.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        return {"success": True, "records": filtered}
+        
     except Exception as e:
         logger.error(f"Error getting evidence by date: {e}")
         return {"success": False, "records": []}
@@ -144,11 +192,17 @@ def delete_evidence(record_id: str):
         if record_to_delete:
             # Try to delete associated images
             for img_rel_path in record_to_delete.get("images", []):
-                # Convert relative path to absolute
-                abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), img_rel_path.replace("/", os.sep))
+                rel_clean = img_rel_path.replace("/", os.sep)
+                # Primary path in app base dir
+                abs_path = os.path.join(get_evidence_base_dir(), rel_clean)
                 try:
                     if os.path.exists(abs_path):
                         os.remove(abs_path)
+                    else:
+                        # Fallback path in _internal
+                        fallback_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_clean)
+                        if os.path.exists(fallback_path):
+                            os.remove(fallback_path)
                 except Exception as e:
                     logger.warning(f"Could not delete image {abs_path}: {e}")
                     
@@ -168,7 +222,15 @@ def get_image_base64(rel_path: str):
     rel_path example: evidence/K1/2026-09/2026-09-02/uuid_0.jpg
     """
     try:
-        abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path.replace("/", os.sep))
+        rel_clean = rel_path.replace("/", os.sep)
+        # Primary path (beside .exe)
+        abs_path = os.path.join(get_evidence_base_dir(), rel_clean)
+        if not os.path.exists(abs_path):
+            # Fallback path (inside _internal)
+            fallback_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_clean)
+            if os.path.exists(fallback_path):
+                abs_path = fallback_path
+
         if os.path.exists(abs_path):
             with open(abs_path, "rb") as fh:
                 b64_str = base64.b64encode(fh.read()).decode('utf-8')

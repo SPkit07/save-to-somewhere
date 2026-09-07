@@ -475,7 +475,14 @@ async function validatePathsAndDirectories() {
         try {
             const exists = await eel.check_directory_exists(path)();
             if (!exists) {
-                const branchLabel = key === 'SP' ? 'SP' : `K${key[0]}-${key[1]}`;
+                let branchLabel = key;
+                if (key === 'SP') {
+                    branchLabel = 'SP';
+                } else if (key.endsWith('_00')) {
+                    branchLabel = `K${key[0]}-WH`;
+                } else if (key.length >= 2) {
+                    branchLabel = `K${key[0]}-SP`;
+                }
                 errors.push(`❌ ไม่พบโฟลเดอร์: ${path} (${branchLabel})`);
             }
         } catch (err) {
@@ -693,7 +700,7 @@ async function savePathsToLocalStorage() {
 
     // Validation: ตรวจสอบว่าไม่มี PATH ว่างเปล่าสำหรับ Page 1
     const emptyPaths = [];
-    document.querySelectorAll('.path-input').forEach(input => {
+    document.querySelectorAll('#branchPaths .path-input').forEach(input => {
         const key = input.getAttribute('data-key');
         if (!key) return; // Only validate Page 1 paths
         const label = input.previousElementSibling ? input.previousElementSibling.textContent : key;
@@ -766,10 +773,10 @@ async function loadPathsFromLocalStorage() {
 
 function getCurrentPathsConfig() {
     const config = {};
-    document.querySelectorAll('.path-input').forEach(input => {
+    document.querySelectorAll('#branchPaths .path-input').forEach(input => {
         const key = input.getAttribute('data-key');
         const value = input.value.trim();
-        if (value) {
+        if (key && value) {
             config[key] = value;
         }
     });
@@ -1340,11 +1347,17 @@ function setupProgramStatusToggle() {
         if (typeof eel === 'undefined' || !eel.get_saved_exe_path) return;
 
         try {
-            const savedPath = await new Promise((resolve) => {
+            let savedPath = await new Promise((resolve) => {
                 eel.get_saved_exe_path()(function(result) {
                     resolve(result);
                 });
             });
+
+            // ถ้าไม่มี savedPath ให้ใช้ตัวแรก (ล่าสุด) จาก dropdown อัตโนมัติ
+            if (!savedPath && recentExeSelect && recentExeSelect.options.length > 1) {
+                savedPath = recentExeSelect.options[1].value;
+                saveSelectedExePath(savedPath);
+            }
 
             if (savedPath && recentExeSelect) {
                 const matchingOption = Array.from(recentExeSelect.options).find((option) => option.value === savedPath);
@@ -1353,8 +1366,17 @@ function setupProgramStatusToggle() {
                     if (customExePath) {
                         customExePath.value = '';
                     }
-                } else if (customExePath) {
-                    customExePath.value = savedPath;
+                } else {
+                    // ถ้าพาธที่เปิดอยู่ไม่ได้อยู่ในลิสต์ที่สแกนเจอ ให้เพิ่มเข้ามาในตัวเลือกแล้วเลือกให้เลย
+                    const option = document.createElement('option');
+                    option.value = savedPath;
+                    const fileName = savedPath.split(/[/\\]/).pop();
+                    option.textContent = `⭐ ${fileName} (กำลังเปิดใช้งาน)`;
+                    recentExeSelect.appendChild(option);
+                    recentExeSelect.value = savedPath;
+                    if (customExePath) {
+                        customExePath.value = '';
+                    }
                 }
             }
         } catch (error) {
@@ -1457,7 +1479,9 @@ function setupProgramStatusToggle() {
                 exeList.forEach((exe, index) => {
                     const option = document.createElement('option');
                     option.value = exe.path;
-                    option.textContent = `${exe.name} (${exe.size_mb}MB)`;
+                    const badge = index === 0 ? '🔥 ล่าสุด: ' : '';
+                    const loc = exe.dir_name ? ` [${exe.dir_name}]` : '';
+                    option.textContent = `${badge}${exe.name}${loc} (${exe.size_mb}MB)`;
                     recentExeSelect.appendChild(option);
                 });
                 console.log(`✅ Loaded ${exeList.length} recent exe files`);
