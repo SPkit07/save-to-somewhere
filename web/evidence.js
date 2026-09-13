@@ -327,7 +327,7 @@ async function loadEvidenceTree() {
                             
                             dayDiv.classList.add('day-item');
                             dayDiv.style.backgroundColor = 'var(--primary)';
-                            dayDiv.style.color = 'white';
+                            dayDiv.style.color = 'black';
                             dayDiv.style.fontWeight = 'bold';
                             
                             window.currentEvidenceBranch = branch;

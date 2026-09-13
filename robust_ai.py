@@ -45,9 +45,7 @@ def clean_series(series):
 
 def compute_isolation_forest_outliers(df_filtered, col='import'):
     group_cols = ['product_id']
-    if 'unit' in df_filtered.columns:
-        group_cols.append('unit')
-        
+
     group_median = df_filtered.groupby(group_cols)[col].transform('median')
     
     # Create ratio feature
@@ -80,9 +78,7 @@ def compute_isolation_forest_outliers(df_filtered, col='import'):
 def compute_xgboost_expected_import(df_filtered, col='import', is_new_col=None):
     df = df_filtered.copy()
     group_cols = ['product_id']
-    if 'unit' in df.columns:
-        group_cols.append('unit')
-        
+
     df['import_lag1'] = df.groupby(group_cols)[col].shift(1).fillna(0)
     df['import_lag2'] = df.groupby(group_cols)[col].shift(2).fillna(0)
     df['import_lag3'] = df.groupby(group_cols)[col].shift(3).fillna(0)
@@ -286,12 +282,12 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         # Apply the mapping so new entries use the exact stock card name if they match
         grouped_recv['product_id'] = grouped_recv['product_id'].map(mapped_products).fillna(grouped_recv['product_id'])
         
-        # Format as new data rows
+        # RECEIVE_PIECE is already in base units; do not convert it again.
         today = pd.to_datetime(datetime.datetime.now().date())
         grouped_recv['DATE'] = today
-        grouped_recv['Bill'] = 'IBK-NEW' # Valid import bill prefix
+        grouped_recv['Bill'] = 'IBTEST'
         grouped_recv['details'] = ''
-        grouped_recv['unit'] = 1
+        grouped_recv['unit'] = 'BASE'
         grouped_recv['export'] = 0
         grouped_recv['balances'] = grouped_recv['import']
         grouped_recv['is_new_entry'] = True
@@ -351,13 +347,13 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
             df_imp['Isolation_Score'], df_imp['_iso_label'], df_imp['_median_import'] = compute_isolation_forest_outliers(df_imp, 'import')
             
             # --- Dynamic IQR, MAD, Median, and Robust Z-Score per product ---
-            group_cols = ['product_id', 'unit']
+            group_cols = ['product_id']
             # Median
             df_imp['Median_dynamic'] = df_imp.groupby(group_cols)['import'].transform('median')
             
             # MAD
             abs_dev = (df_imp['import'] - df_imp['Median_dynamic']).abs()
-            df_imp['MAD_dynamic'] = abs_dev.groupby([df_imp['product_id'], df_imp['unit']]).transform('median')
+            df_imp['MAD_dynamic'] = abs_dev.groupby(df_imp['product_id']).transform('median')
             
             # IQR
             q75 = df_imp.groupby(group_cols)['import'].transform(lambda x: x.quantile(0.75))
@@ -392,7 +388,7 @@ def process_ai_stock(receive_file_path: str, stock_card_folder: str, branch_code
         if not valid_df.empty:
             df.loc[valid_mask, '_xgb_expected'] = compute_xgboost_expected_import(valid_df, 'import', 'is_new_entry')
 
-        df['_xgb_expected'] = df.groupby(['product_id', 'unit'])['_xgb_expected'].ffill().bfill()
+        df['_xgb_expected'] = df.groupby('product_id')['_xgb_expected'].ffill().bfill()
         df['Expected_Import'] = np.where(df['import'] > 0, df['_xgb_expected'], np.nan)
         
         expected_mask = (df['import'] > 0) & df['Expected_Import'].notna()
